@@ -1,0 +1,33 @@
+Fantasy Variation (10 cells wide, 8 cells long):
+------------------------------------------------------
+Trap (T) - x6 - Immovable; any piece attacking a Trap is removed from the game, unless the attacking piece was a Dwarf
+Dragon (10) - x1 - May reveal, then fly over any number of occupied squares (including forbidden zones) in a straight line (not diagonal) to land on the first empty square, then may make a standard attack against an adjacent piece
+Mage (9) - x1 - May reveal, then force an enemy piece within 2 squares to reveal (squares can be counted in any direction, including diagonal, and can cross forbidden zones)
+Knight (8) - x2 - May reveal, then move 2 squares (squares can be counted in any direction except diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat
+Beast Rider (7) - x3 - May reveal, then move 2 squares (squares can be counted in any direction except diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat
+Sorceress (6) - x2 - May reveal, then force an enemy piece within 2 squares to reveal (squares can be counted in any direction, including diagonal, and can cross forbidden zones); if the revealed enemy piece is rank 5 or lower, it comes under the sorceress' control (including slayers, but not traps/flags)
+Yeti/Lava Beast (5) - x2 - May reveal, then move to an adjecent square (not diagonal), then attack ALL adjecent pieces (including diagonal, and friendly pieces); any attacked pieces of rank 5 or lower are captured (including flags); if any attacked pieces are of rank 5 or higher (including traps) then the attacking piece is captured
+Elf (4) - x2 - May reveal, then attack an enemy piece within 2 squares (squares can be counted in any direction, including diagonal, and can cross forbidden zones); any attacked piece of rank 3 or lower is captured (including flags), otherwise no effect
+Dwarf (3) - x5 - When attacking a Trap, the Dwarf is not captured, instead capturing the Trap
+Scout (2) - x4 - May reveal, then move any number of unoccupied squares in a straight line (not diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat
+Slayer (S) - x1 - Captured by any piece (except flags); when in combat with the Dragon, the Slayer is not captured, instead capturing the Dragon
+Flag (F) - x1 - Immovable; any piece attacking a Flag captures it, ending the game immediately
+
+
+------------------------------------------------------
+
+
+Historical Variation (10 cells wide, 10 cells long):
+------------------------------------------------------
+Bomb (B) - x6 - Immovable; any piece attacking a Bomb is removed from the game, unless the attacking piece was a Miner
+Marshal (10) - x1 - Most powerful piece, but vulnerable to capture by an attacking Spy
+General (9) - x1 - 	
+Colonel (8) - x2 - 	
+Major (7) - x3 - 
+Captain (6) - x4 - 
+Lieutenant (5) - x4 - 
+Sergeant (4) - x4 - 
+Miner (3) - x5 - Can defuse (i.e. capture) Bombs
+Scout (2) - x8 - Can move any distance in a horizontal or vertical straight line without leaping over pieces or lakes; allows movement and attack in same turn
+Spy (S) - x1 - Weakest piece, captured by any other attacking piece, but an attacking Spy can capture the Marshal
+Flag (F) - x1 - Immovable; capturing the opponent's Flag wins the game
