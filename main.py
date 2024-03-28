@@ -31,7 +31,7 @@ import random
 
 # UNIVERSAL CONSTANTS
 MIN_PLAYERS = 2
-MAX_PLAYERS = 4
+MAX_PLAYERS = 6
 CONTINUATION_CHECK = False
 
 
@@ -60,7 +60,7 @@ class Window(tk.Toplevel):
                        command=lambda: [root.open_window("Game Setup", "setup"), self.withdraw()]).pack(side=tk.TOP, pady=5)
             tk.Button(self,
                        text="Continue",
-                       command=lambda: [changeContinueCheck(), root.open_window("Game Save", "setup"), self.withdraw()]).pack(pady=5)
+                       command=lambda: [changeContinueCheck(), root.open_window("Game Load", "setup"), self.withdraw()]).pack(pady=5)
             tk.Button(self,
                        text="Options",
                        command=lambda: [root.open_window("Options", "options"), self.withdraw()]).pack(pady=5)
@@ -213,6 +213,21 @@ class Root(tk.Tk):
     
     def load_save(saveName):
         saveFile = open(saveName, "r")
+        for line in saveFile:
+            if "playerCount" in line:
+                global playerCount
+                if MAX_PLAYERS > 9:
+                    playerCount = (line[13:15]).strip()
+                else:
+                    playerCount = line[13:14]
+                continue
+            '''elif "playerCount" in line:
+                global playerCount
+                if MAX_PLAYERS > 9:
+                    playerCount = (line[13:15]).strip()
+                else:
+                    playerCount = line[13:14]
+                continue'''
     
     # def hideNonActivePlayer(self, playerTurn):
     #    for child in self.winfo_children():
