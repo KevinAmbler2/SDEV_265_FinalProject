@@ -10,7 +10,7 @@ Yeti/Lava Beast (5) - x2 - May reveal, then move to an adjecent square (not diag
 Elf (4) - x2 - May reveal, then attack an enemy piece within 2 squares (squares can be counted in any direction, including diagonal, and can cross forbidden zones); any attacked piece of rank 3 or lower is captured (including flags), otherwise no effect
 Dwarf (3) - x5 - When attacking a Trap, the Dwarf is not captured, instead capturing the Trap
 Scout (2) - x4 - May reveal, then move any number of unoccupied squares in a straight line (not diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat
-Slayer (S) - x1 - Captured by any piece (except flags); when in combat with the Dragon, the Slayer is not captured, instead capturing the Dragon
+Slayer (S) - x1 - Captured by any piece (except flags); when attacking the Dragon, the Slayer is not captured, instead capturing the Dragon
 Flag (F) - x1 - Immovable; any piece attacking a Flag captures it, ending the game immediately
 
 
