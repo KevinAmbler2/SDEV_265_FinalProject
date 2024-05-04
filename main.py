@@ -153,9 +153,10 @@ class Window(tk.Toplevel):
             # Generates an empty board array based on the dimensions provided
             # boardTileArray[y][x] format -> stored as yx  -> increments across
             def generate(boardWidth, boardHeight):
-                global boardTileArray
-                boardTileArray = [[tk.Button(self) for x in range(boardHeight)] for y in range(boardWidth)]
-                self.geometry(str((boardHeight*75)+((leftOffset+1)*offsetSize))+"x"+str((boardWidth*75)))
+                global boardTileArray,tileStateArray
+                boardTileArray = [[tk.Button(self) for x in range(boardHeight)] for y in range(boardWidth)] # Creates clickable tiles for the user
+                tileStateArray = [["Empty" for x in range(boardHeight)] for y in range(boardWidth)] # Stores data on cells in background
+                self.geometry(str((boardHeight*75)+((leftOffset+1)*offsetSize))+"x"+str((boardWidth*75))) # Sets size of board window based on gamemode
 
             if selectedGamemode.get() == "Classic":
                 generate(10,10)
@@ -167,7 +168,8 @@ class Window(tk.Toplevel):
                 for i in range(leftOffset):
                     self.columnconfigure(i, weight= 2, minsize=offsetSize)
 
-            tk.Button(self,text="Menu",command=lambda: [root.open_window("Pause Menu", "pauseMenu")]).grid(column=0,row=0,sticky=(tk.N,tk.W))
+            pauseButton = tk.Button(self,text="Menu",command=lambda: [root.open_window("Pause Menu", "pauseMenu")])
+            pauseButton.grid(column=0,row=0,sticky=(tk.N,tk.W))
             
             tk.Label(self,text="Active Player:").grid(column=0,row=1)
             turnIndicator = tk.Label(self, bg=activePlayerColor)
@@ -178,16 +180,22 @@ class Window(tk.Toplevel):
                 self.rowconfigure(y, weight= 1, minsize=75)
                 for x in range(len(boardTileArray[y])):
                     self.columnconfigure(x+leftOffset, weight= 1, minsize=75)
-                    buttonEditor = boardTileArray[y][x]
+
+                    # Create dictionary of button variable names, each assigned as '[row-number][col-number]'
+                    buttonDict = {}
+                    buttonDict['%1d%1d',y,x] = boardTileArray[y][x]
+                    buttonDict['%1d%1d',y,x].configure(text=str(y)+str(x))
+
+                    # Sets up impassible tiles in middle of board based on gamemode
                     if selectedGamemode.get() == "Classic":
                         j,k = 4,5
                     else:
                         j,k = 3,4
                     if (y==j or y==k) and (x==2 or x==3 or x==6 or x==7):
-                        buttonEditor.configure(text="X")
-                    else:
-                        buttonEditor.configure(text=str(y)+str(x))
-                    buttonEditor.grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
+                        tileStateArray[y][x] = "Impassible"
+                        buttonDict['%1d%1d',y,x].configure(text="X") # Temporary indicator
+
+                    buttonDict['%1d%1d',y,x].grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
 
             # Section for right-side GUI widgets
             self.columnconfigure(leftOffset+len(boardTileArray[0]), weight= 2, minsize=offsetSize)
@@ -197,7 +205,7 @@ class Window(tk.Toplevel):
             RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
 
             endTurnButton = tk.Button(self,text="End Turn",bg='yellow')
-            endTurnButton.grid(column=leftOffset+len(boardTileArray[0]),row=9,rowspan=1)
+            endTurnButton.grid(column=leftOffset+len(boardTileArray[0]),row=len(boardTileArray)-1,rowspan=1)
 
 
         elif type == "exit":
