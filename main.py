@@ -153,12 +153,9 @@ class Window(tk.Toplevel):
             # Generates an empty board array based on the dimensions provided
             # boardTileArray[y][x] format -> stored as yx  -> increments across
             def generate(boardWidth, boardHeight):
-                #global boardTileArray
-                global boardButtonArray
-                #boardTileArray = [[int(str(y)+str(x)) for x in range(boardWidth)] for y in range(boardHeight)]
-                boardButtonArray = [[tk.Button(self) for x in range(boardWidth)] for y in range(boardHeight)]
-                #self.geometry(str((boardWidth*75)+((leftOffset+rightOffset)*offsetSize))+"x"+str((boardHeight*75)))
-                self.geometry(str((boardWidth*75)+((leftOffset+1)*offsetSize))+"x"+str((boardHeight*75)))
+                global boardTileArray
+                boardTileArray = [[tk.Button(self) for x in range(boardHeight)] for y in range(boardWidth)]
+                self.geometry(str((boardHeight*75)+((leftOffset+1)*offsetSize))+"x"+str((boardWidth*75)))
 
             if selectedGamemode.get() == "Classic":
                 generate(10,10)
@@ -177,26 +174,30 @@ class Window(tk.Toplevel):
             turnIndicator.grid(column=0,row=2,sticky=(tk.E,tk.W), padx=5)
 
             # Section for main board grid
-            #for y in range(len(boardTileArray)): # Creates board grid and places button within each cell
-            for y in range(len(boardButtonArray)):
+            for y in range(len(boardTileArray)): # Creates board grid and places button within each cell
                 self.rowconfigure(y, weight= 1, minsize=75)
-                #for x in range(len(boardTileArray[y])):
-                for x in range(len(boardButtonArray[y])):
+                for x in range(len(boardTileArray[y])):
                     self.columnconfigure(x+leftOffset, weight= 1, minsize=75)
-                    #tk.Button(self,text=str(boardTileArray[y][x])).grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
-                    buttonEditor = boardButtonArray[y][x]
-                    buttonEditor.configure(text=str(y)+str(x))
+                    buttonEditor = boardTileArray[y][x]
+                    if selectedGamemode.get() == "Classic":
+                        j,k = 4,5
+                    else:
+                        j,k = 3,4
+                    if (y==j or y==k) and (x==2 or x==3 or x==6 or x==7):
+                        buttonEditor.configure(text="X")
+                    else:
+                        buttonEditor.configure(text=str(y)+str(x))
                     buttonEditor.grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
 
             # Section for right-side GUI widgets
-            '''self.columnconfigure(leftOffset+len(boardTileArray[0]), weight= 2, minsize=offsetSize)
+            self.columnconfigure(leftOffset+len(boardTileArray[0]), weight= 2, minsize=offsetSize)
             RIGHTELEMENT1 = tk.Text(self,wrap='word')
             RIGHTELEMENT1.insert(1.0,"Here's where a GUI element will go.")
             RIGHTELEMENT1.grid(column=leftOffset+len(boardTileArray[0]),row=0,rowspan=1)
             RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
 
             endTurnButton = tk.Button(self,text="End Turn",bg='yellow')
-            endTurnButton.grid(column=leftOffset+len(boardTileArray[0]),row=9,rowspan=1)'''
+            endTurnButton.grid(column=leftOffset+len(boardTileArray[0]),row=9,rowspan=1)
 
 
         elif type == "exit":
