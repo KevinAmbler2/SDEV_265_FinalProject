@@ -7,40 +7,24 @@ from tkinter import ttk
 
 import random
 
-#--------------------------------------------------------
-# POSSIBLE TO-DO (non-obvious/undocumented features):   |
-#--------------------------------------------------------
-# - Player order tracker and/or turn tracker.           |
-# - Options menu with save/cancel function              |
-#       (documented but highly unfinished).             |
-# - Manual saving/autosave function after               |
-#       player activation (possibly save board          |
-#       arrays/player info data in text files).         |
-# - Savegame loading of ongoing games.                  |
-#--------------------------------------------------------
-# STRETCH GOALS:                                        |
-#--------------------------------------------------------
-# - Expansion pack content (5-6 player variant, cities  |
-#       and knights, etc).                              |
-#--------------------------------------------------------
-# PERSONAL TO-DO (QoL stuff or "dev infrastructure"):   |
-#--------------------------------------------------------
-# - Change tile relationship doc to be self-updating.   |
-#--------------------------------------------------------
-
 
 # UNIVERSAL CONSTANTS
-MIN_PLAYERS = 2
-MAX_PLAYERS = 6
-CONTINUATION_CHECK = False
+GAMEMODES = ["Classic","Fantasy"]
+
+# Initial global values
+continuationCheck = False
+gamemode = "Classic"
+sound = True
+music = True
+confirmationPrompt = True
+activePlayerColor = 'red'
 
 
-class BoardGeneration():
-    def __init__(self, parent):
-        super().__init__(parent)
-
+'''class BoardGeneration():
+    # Generates an empty board based on the dimensions provided
+    def generate(boardHeight, boardWidth):
         global boardTileArray
-        boardTileArray = []
+        boardTileArray = [[i] * boardWidth for i in range(boardHeight)]'''
 
 
 class Window(tk.Toplevel):
@@ -50,10 +34,11 @@ class Window(tk.Toplevel):
         self.geometry("300x100")
         self.title(title)
 
-        if type != "exit" and type != "invalid" and type != "options":
+        if type != "exit" and type != "invalid" and type != "options" and type != "pauseMenu":
             self.protocol("WM_DELETE_WINDOW", root.close_confirm)
 
-        if type == "menu":
+
+        if type == "mainMenu": # UNFINISHED
             self.geometry("300x200")
             tk.Button(self,
                        text="Play Game",
@@ -69,25 +54,42 @@ class Window(tk.Toplevel):
                        command=root.close_confirm).pack(side=tk.BOTTOM, pady=5)
             
             def changeContinueCheck():
-                global CONTINUATION_CHECK
-                CONTINUATION_CHECK = True
+                global continuationCheck
+                continuationCheck = True
+
 
         elif type == "options":  # UNFINISHED
             tk.Button(self,
                        text="Save options",
-                       command=lambda: [menu.deiconify(), self.destroy()]).pack(side=tk.LEFT)  # UNFINISHED
+                       command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.LEFT)  # UNFINISHED
             tk.Button(self,
                        text="Cancel",
-                       command=lambda: [menu.deiconify(), self.destroy()]).pack(side=tk.RIGHT)
+                       command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.RIGHT)
+        
 
-        elif type == "setup":
-            numPlayersStr = tk.StringVar()
-            numPlayersEntry = tk.Entry(self, textvariable=numPlayersStr)
-            numPlayersEntry.pack(expand=True, side=tk.TOP)
+        elif type == "pauseMenu": #UNFINISHED
+            self.geometry("200x300")
+            tk.Button(self,
+                       text="Return",
+                       command=lambda: [self.destroy()]).pack(side=tk.TOP, pady=5)
+            # UNFINISHED SAVE AND LOAD FUNCTION
+            tk.Button(self,
+                       text="Save",
+                       command=lambda: [self.destroy()]).pack(pady=5)
+            tk.Button(self,
+                       text="Load",
+                       command=lambda: [changeContinueCheck(), root.open_window("Game Load", "setup"), self.destroy()]).pack(pady=5)
+            tk.Label(self,text="Options").pack(pady=5)
+            # UNFINISHED RADIO BUTTONS TO ENABLE SOUND/MUSIC/CONFIRMATION PROMPT
+            tk.Button(self,
+                       text="Main Menu",
+                       command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.BOTTOM, pady=5)
 
+
+        elif type == "setup": # UNFINISHED
             # This is kinda a stupid way to do things lol, but it works in theory
             # Save data needs to be saved in a way that allows program to differeniate sections of info
-            '''if CONTINUATION_CHECK == True:
+            '''if continuationCheck == True:
                 savedPlayerCount = open("savedata.txt", "r")
                 numPlayersEntry.insert(savedPlayerCount)
             else:
@@ -97,90 +99,109 @@ class Window(tk.Toplevel):
                         command=lambda: addPlayers()).pack(side=tk.LEFT)  # UNFINISHED
                 tk.Button(self,
                         text="Back",
-                        command=lambda: [menu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Hide menu and destroy setup page'''
-                
-            numPlayersEntry.insert(0, "Enter the number of players, "+str(MIN_PLAYERS)+"-"+str(MAX_PLAYERS))
-
+                        command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Hide menu and destroy setup page'''
+            
+            global selectedGamemode
+            selectedGamemode = tk.StringVar()
+            selectedGamemode.set("Classic") # Set default gamemode
+            tk.OptionMenu(self,selectedGamemode,*GAMEMODES).pack(side=tk.TOP) # Create dropdown menu for gamemode
             tk.Button(self,
                     text="Continue",
-                    command=lambda: addPlayers()).pack(side=tk.LEFT)  # UNFINISHED
+                    command=lambda: endSetup()).pack(side=tk.LEFT)
             tk.Button(self,
                     text="Back",
-                    command=lambda: [menu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Hide menu and destroy setup page
-
-            def addPlayers():
-                global numPlayers
-                numPlayers = int(numPlayersEntry.get())
-                if numPlayers <= MAX_PLAYERS and numPlayers >= MIN_PLAYERS:
-                    root.open_window("Board", "board")
-                    TEMPcreatePlayerWindows(numPlayers)
-                    self.destroy()
-                    #print(numPlayers)
-                else:
-                    root.open_window("Error", "playerCountError")
+                    command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Unhide menu and destroy setup page
             
-            def playerColorGen(window, color):
-                window.configure(background=color)
-                tk.Label(window,
-                        text="Player Number "+str(currPlayerNum),
-                        background=color).pack()
-                # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
-                tk.Button(window,
-                        text="Close this window",
-                        command=window.destroy).pack(side=tk.RIGHT)
+            # Signals setup is complete and generates board based on chosen settings
+            def endSetup():
+                root.open_window("Board", "board")
+                createPlayerWindows()
+                self.destroy()
             
-            def TEMPcreatePlayerWindows(numPlayers):
-                global currPlayerNum
-                currPlayerNum = 1
-                while currPlayerNum <= numPlayers:
-                    newPlayerSheet = root.open_window("Player "+str(currPlayerNum), "playerSheet")
-                    newPlayerSheet.geometry("200x400")
-
-                    if currPlayerNum == 1:
-                        playerColorGen(newPlayerSheet, "red")
-                    elif currPlayerNum == 2:
-                        playerColorGen(newPlayerSheet, "blue")
-                    elif currPlayerNum == 3:
-                        playerColorGen(newPlayerSheet, "orange")
-                    elif currPlayerNum == 4:
-                        playerColorGen(newPlayerSheet, "yellow")
-
-                    # Extra player setup for if expansions are included
-                    elif currPlayerNum == 5:
-                        playerColorGen(newPlayerSheet, "green")
-                    else:
-                        playerColorGen(newPlayerSheet, "white")
-
-                    currPlayerNum += 1
-
-        elif type == "board":
-            self.geometry("600x600")
-            tk.Button(self,
-                       text="Open new window",
-                       command=lambda: root.open_window("Board", "board")).pack(side=tk.LEFT)
-            # HIDES ALL PLAYERS IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
-            tk.Button(self,
-                       text="Close this window",
-                       command=self.destroy).pack(side=tk.RIGHT)
+            def createPlayerWindows(): # Creates the initial windows for players' personal sheets
+                global curPlayer
+                curPlayer = 1
+                root.open_window("Player 1", "playerSheet")
+                curPlayer = 2
+                root.open_window("Player 2", "playerSheet")
         
-            '''elif type == "playerSheet":
+
+        elif type == "playerSheet": # Formats the players' personal sheets
             self.geometry("200x400")
-            ttk.Label(self,text="Player Number "+str(playerNum)).pack()
+            # Formats player sheets based on indentity
+            if curPlayer == 1:
+                ttk.Label(self,text="Player Number 1").pack()
+                self.configure(background="red")
+            elif curPlayer == 2:
+                ttk.Label(self,text="Player Number 2").pack()
+                self.configure(background="blue")
+            # Creates an obvious error if player count is misinterpretted
+            else:
+                ttk.Label(self,text="PLAYER SHEET ERROR").pack()
+                self.configure(background="yellow")
             # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
             ttk.Button(self,
                        text="Close this window",
-                       command=self.destroy).pack(side=tk.RIGHT)'''
-        
-        elif type == "playerCountError": # Make a subclass of an error type?
-            self.geometry("250x100")
-            self.resizable(False,False)
-            tk.Label(self,text=("Please enter a number of players between "+str(MIN_PLAYERS)+"-"+str(MAX_PLAYERS)+".")).pack()
-            tk.Button(self,
-                       text="OK",
-                       command=self.destroy).pack(side=tk.BOTTOM)
+                       command=self.destroy).pack(side=tk.RIGHT)
+            
+
+        elif type == "board": # Creates the main board window, where most of the interaction takes place
+            leftOffset = 1 # Number of columns to offset for GUI on left of board grid
+            '''rightOffset = 1 # Number of columns to offset for GUI on right of board grid'''
+            offsetSize = 150 # Size of offset cells for both sides
+
+            # Generates an empty board array based on the dimensions provided
+            # boardTileArray[y][x] format -> stored as yx  -> increments across
+            def generate(boardWidth, boardHeight):
+                #global boardTileArray
+                global boardButtonArray
+                #boardTileArray = [[int(str(y)+str(x)) for x in range(boardWidth)] for y in range(boardHeight)]
+                boardButtonArray = [[tk.Button(self) for x in range(boardWidth)] for y in range(boardHeight)]
+                #self.geometry(str((boardWidth*75)+((leftOffset+rightOffset)*offsetSize))+"x"+str((boardHeight*75)))
+                self.geometry(str((boardWidth*75)+((leftOffset+1)*offsetSize))+"x"+str((boardHeight*75)))
+
+            if selectedGamemode.get() == "Classic":
+                generate(10,10)
+            elif selectedGamemode.get() == "Fantasy":
+                generate(8,10)
+            
+            # Section for left-side GUI widgets
+            if leftOffset > 0:
+                for i in range(leftOffset):
+                    self.columnconfigure(i, weight= 2, minsize=offsetSize)
+
+            tk.Button(self,text="Menu",command=lambda: [root.open_window("Pause Menu", "pauseMenu")]).grid(column=0,row=0,sticky=(tk.N,tk.W))
+            
+            tk.Label(self,text="Active Player:").grid(column=0,row=1)
+            turnIndicator = tk.Label(self, bg=activePlayerColor)
+            turnIndicator.grid(column=0,row=2,sticky=(tk.E,tk.W), padx=5)
+
+            # Section for main board grid
+            #for y in range(len(boardTileArray)): # Creates board grid and places button within each cell
+            for y in range(len(boardButtonArray)):
+                self.rowconfigure(y, weight= 1, minsize=75)
+                #for x in range(len(boardTileArray[y])):
+                for x in range(len(boardButtonArray[y])):
+                    self.columnconfigure(x+leftOffset, weight= 1, minsize=75)
+                    #tk.Button(self,text=str(boardTileArray[y][x])).grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
+                    buttonEditor = boardButtonArray[y][x]
+                    buttonEditor.configure(text=str(y)+str(x))
+                    buttonEditor.grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
+
+            # Section for right-side GUI widgets
+            '''self.columnconfigure(leftOffset+len(boardTileArray[0]), weight= 2, minsize=offsetSize)
+            RIGHTELEMENT1 = tk.Text(self,wrap='word')
+            RIGHTELEMENT1.insert(1.0,"Here's where a GUI element will go.")
+            RIGHTELEMENT1.grid(column=leftOffset+len(boardTileArray[0]),row=0,rowspan=1)
+            RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
+
+            endTurnButton = tk.Button(self,text="End Turn",bg='yellow')
+            endTurnButton.grid(column=leftOffset+len(boardTileArray[0]),row=9,rowspan=1)'''
+
 
         elif type == "exit":
             # If close is confirmed, calls close_all function
+            # Save functionality -> UNDER DEVELOPMENT
             tk.Label(self,text="Are you sure you want to close?").pack()
             tk.Button(self,
                        text="Save and close all windows",
@@ -189,6 +210,7 @@ class Window(tk.Toplevel):
             tk.Button(self,
                        text="Back",
                        command=self.destroy).pack(side=tk.RIGHT)
+
 
 class Root(tk.Tk):
     def __init__(self):
@@ -203,7 +225,8 @@ class Root(tk.Tk):
 
     def open_window(self, title, type):
         window = Window(self, title, type)
-        if type == "exit" or type == "options" or type == "playerCountError":  # If exit confirmation window, forces user interaction
+        window.resizable(False,False)
+        if type == "exit" or type == "options" or type == "pauseMenu":  # If exit confirmation window, forces user interaction
             window.grab_set()
 
         return window
@@ -216,18 +239,8 @@ class Root(tk.Tk):
         for line in saveFile:
             if "playerCount" in line:
                 global playerCount
-                if MAX_PLAYERS > 9:
-                    playerCount = (line[13:15]).strip()
-                else:
-                    playerCount = line[13:14]
+                playerCount = line.strip("playerCount= ")
                 continue
-            '''elif "playerCount" in line:
-                global playerCount
-                if MAX_PLAYERS > 9:
-                    playerCount = (line[13:15]).strip()
-                else:
-                    playerCount = line[13:14]
-                continue'''
     
     # def hideNonActivePlayer(self, playerTurn):
     #    for child in self.winfo_children():
@@ -243,6 +256,6 @@ class Root(tk.Tk):
 if __name__ == "__main__":
     root = Root()
 
-    menu = root.open_window("Main Menu", "menu")
+    mainMenu = root.open_window("Main Menu", "mainMenu")
 
     root.mainloop()
