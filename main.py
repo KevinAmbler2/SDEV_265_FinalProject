@@ -1,5 +1,5 @@
 # Import statements
-import tkinter as tk
+import tkinter as tk # Import tkinter modules to workspace
 from tkinter import ttk
 
 #import PIL
@@ -9,18 +9,28 @@ import random
 
 
 # UNIVERSAL CONSTANTS
-GAMEMODES = ["Classic","Fantasy"]
+GAMEMODES = ["Classic","Fantasy"] # Available gamemode variations
+UNIT_STRENGTH = [10,9,8,7,6,5,4,3,2,'S','F','T'] # Array holding all unit strengths (used to create player sheet rosters)
+# Dictionary holding the names, strength, and quantity of units for the "Classic" gamemode variation in the format strength:[unitName,quantity]
+CLASSIC_ROSTER = {10:["Marshal",1],9:["General",1],8:["Colonel",2],7:["Major",3],6:["Captain",4],
+                  5:["Lieutenant",4],4:["Sergeant",4],3:["Miner",5],2:["Scout",8],'S':["Spy",1],'F':["Flag",1],'T':["Bomb",6]}
+# Dictionary holding the names, strength, and quantity of units for the "Classic" gamemode variation in the format strength:[unitName,quantity]
+FANTASY_ROSTER = {10:["Dragon",1],9:["Mage",1],8:["Knight",2],7:["Beast Rider",3],6:["Sorceress",2],
+                  5:["Elemental",2],4:["Elf",2],3:["Dwarf",5],2:["Scout",4],'S':["Spy",1],'F':["Flag",1],'T':["Trap",6]}
+#print(CLASSIC_ROSTER)
+#print("\n\n\n")
+#print(FANTASY_ROSTER)
 
 # Initial global values
-continuationCheck = False
-gamemode = "Classic"
-sound = True
-music = True
-confirmationPrompt = True
-activePlayer = 'red'
-arrayDict = {}
-selectedButton = None
-lastBG = None
+continuationCheck = False # Checks if system should be starting a new game (False) or loading existing game (True)
+sound = True # Enables(True)/disables(False) game sound (default = True)
+music = True # Enables(True)/disables(False) background music (default = True)
+confirmationPrompt = True # Enables(True)/disables(False) pop-up prompt after making a valid move (default = True)
+activePlayer = 'R' # Tracks the current active player for display and piece control (default = 'R')
+arrayDict = {} # Stores button and backend data sub-dictionaries for main board and both player sheets
+selectedButton = None # Indicates which button the user has clicked on (excluding GUI/navigational buttons)
+lastBG = None # Stores the previous background color of the selected button
+tileContent = "" # Stores the backend data of what was positioned on the tile selected by the user
 
 
 class Window(tk.Toplevel):
@@ -32,22 +42,39 @@ class Window(tk.Toplevel):
         
         class BoardFunctionality():
             # Changes ownership of active player status
-            def endTurn(player):
+            def end_turn(player):
                 global activePlayer
-                if player == "red":
-                    activePlayer = "blue"
+                if player == 'R':
+                    activePlayer = 'B'
+                    turnIndicator.configure(bg="blue")
                 else:
-                    activePlayer = "red"
-                turnIndicator.configure(bg=activePlayer)
+                    activePlayer = 'R'
+                    turnIndicator.configure(bg="red")
+            
+            # Reads the contents of the cell background data and moves pieces as allowed by valid moves, then updates the board buttons
+            def move_selection(tileStateArray,y,x):
+                global tileContent
+                selectedTile = arrayDict[tileStateArray][y][x] # Indicates which tile is being accessed
+                if selectedTile != "Impassible": # Checks that both destination and source tiles aren't impassible
+                    if tileContent != "": # Runs if selected tile is second tile clicked (ie, selected tile is the destination tile)
+                        arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
+                        tileContent = "" # Clears storage variable to allow new source tile
+                    else: # Runs if selected tile is first tile clicked (ie, selected tile is the source tile)
+                        if selectedTile != "Empty": # Won't allow an empty tile to be assigned as source tile
+                            tileContent = selectedTile # Set storage variable to source tile's value
+                            arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
+                heldUnitTracker.configure(text=("Held Unit: "+tileContent)) # Updates value of unit tracker
 
             # Highlights selected cell in gold on click
-            def highlightSelection(button):
+            def highlight_selection(tileArray,tileStateArray,y,x):
                 global selectedButton, lastBG
+                button = arrayDict[tileArray][y][x]
                 if selectedButton is not None:
-                    selectedButton.config(bg=lastBG)
+                    selectedButton.configure(bg=lastBG)
                 lastBG = button.cget("bg")
                 selectedButton = button
-                button.config(bg="gold")
+                BoardFunctionality.move_selection(tileStateArray,y,x) # Changes background data of clicked tile, dependent on factors as documented above
+                button.configure(bg="gold",text=arrayDict[tileStateArray][y][x]) # Updates value of button text to reflect background data
 
         # ??MERGE GENERATE + POPULATE??
 
@@ -55,30 +82,53 @@ class Window(tk.Toplevel):
         # arrayDict['tileArrayB'][y][x] format -> stored as yx  -> increments across
         def generate(arrayWidth, arrayHeight, useCase):
             global arrayDict
+
+            # Expandable else if tree that determines where arrays are being created
             if useCase == "board":
-                arrayDict['tileArrayB'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayHeight)] for y in range(arrayWidth)] # Creates clickable tiles for the user
-                arrayDict['tileStateArrayB'] = [["Empty" for x in range(arrayHeight)] for y in range(arrayWidth)] # Stores data on cells in background
-                #self.geometry(str((arrayHeight*75)+((leftOffset+1)*offsetSize))+"x"+str((arrayWidth*75))) # Sets size of board window based on gamemode
+                # Creates clickable tiles for the user
+                arrayDict['tileArrayB'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayHeight)] for y in range(arrayWidth)]
+                # Stores data on cells in background
+                arrayDict['tileStateArrayB'] = [["Empty" for y in range(arrayHeight)] for x in range(arrayWidth)]
+
+                # TESTING VALUES
+                arrayDict['tileStateArrayB'][0][0] = "Unit1"
+                arrayDict['tileStateArrayB'][1][2] = "Unit2"
+                arrayDict['tileStateArrayB'][6][7] = "Unit3"
+
             elif useCase == "playerSheet":
                 # Creates clickable tiles for the user
-                arrayDict['tileArrayP%1d'%curPlayer] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayHeight)] for y in range(arrayWidth)]
+                arrayDict['tileArrayP%1c'%activePlayer] = [[tk.Button(self,relief="groove",activebackground="gold") for y in range(arrayHeight)] for x in range(arrayWidth)]
                 # Stores data on cells in background
-                arrayDict['tileStateArrayP%1d'%curPlayer] = [["Empty" for x in range(arrayHeight)] for y in range(arrayWidth)]
+                arrayDict['tileStateArrayP%1c'%activePlayer] = [["Empty" for y in range(arrayHeight)] for x in range(arrayWidth)]
+                # Creates additional array to display unit quantity to players (unique to player sheets)
+                arrayDict['quantityArrayP%1c'%activePlayer] = [[tk.Label(self,text=UNIT_STRENGTH[y]) for y in range(arrayHeight)] for x in range(arrayWidth)]
+
+                # TESTING VALUES
+                arrayDict['tileStateArrayP%1c'%activePlayer][0][0] = "Unit1"
+                arrayDict['tileStateArrayP%1c'%activePlayer][1][0] = "Unit2"
+                arrayDict['tileStateArrayP%1c'%activePlayer][6][0] = "Unit3"
         
-        # Fills generated arrays with buttons
-        def populateInitialArrayButtons(tileArray, tileStateArray, leftOffset, offsetSize): # leftOffset - Number of columns to offset for GUI on left of board grid
+        # Fills generated arrays with properly formatted buttons
+        def populate_initial_array_buttons(tileArray, tileStateArray, leftOffset, offsetSize): # leftOffset - Number of columns to offset for GUI on left of board grid
             # Section for left-side GUI widgets
             if leftOffset > 0:
                 for i in range(leftOffset):
                     self.columnconfigure(i, weight= 2, minsize=offsetSize)
-
-            for y in range(len(arrayDict[tileArray])): # Creates array grid and places button within each cell
+            
+            # Creates array grid and places button within each cell
+            for y in range(len(arrayDict[tileArray])):
                 self.rowconfigure(y, weight= 1, minsize=50)
                 for x in range(len(arrayDict[tileArray][y])):
                     self.columnconfigure(x+leftOffset, weight= 1, minsize=50)
 
-                    # Call sub-dictionaries (children of arrayDict) of button variable names and configure appropriately, each initial assigned as '[row-number][col-number]'
-                    arrayDict[tileArray][y][x].configure(text=str(y)+str(x),command=lambda button=arrayDict[tileArray][y][x]: BoardFunctionality.highlightSelection(button))
+                    # Call sub-dictionaries (children of arrayDict) of button variable names and configure appropriately, each initial assigned as str(y)+str(x)'[row-number][col-number]'
+                    '''arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
+                                                         command=lambda button=arrayDict[tileArray][y][x],
+                                                         tile=arrayDict[tileStateArray][y][x]: [BoardFunctionality.highlight_selection(button),
+                                                                                                BoardFunctionality.getTileState(tile)])'''
+                    arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
+                                        command=lambda tempTA=tileArray,
+                                        tempTSA=tileStateArray,tempY=y,tempX=x: [BoardFunctionality.highlight_selection(tempTA,tempTSA,tempY,tempX)])
 
                     if tileArray.strip("tileArray") == "B": # Checks if main board is being generated
                         self.rowconfigure(y, weight= 1, minsize=75)
@@ -101,15 +151,16 @@ class Window(tk.Toplevel):
                         RIGHTELEMENT1.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=0,rowspan=1)
                         RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
 
-                        endTurnButton = tk.Button(self,text="End Turn",bg='yellow',command=lambda:[BoardFunctionality.endTurn(activePlayer)])
+                        endTurnButton = tk.Button(self,text="End Turn",bg='yellow',command=lambda:[BoardFunctionality.end_turn(activePlayer)])
                         endTurnButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-1,rowspan=1)
                     
-                    arrayDict[tileArray][y][x].grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W))
-
+                    arrayDict[tileArray][y][x].grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W)) # Positions buttons within the window's grid
+        
+        # Allows user to close listed windows manually, otherwise prevents deletion of critical windows/components
         if type != "exit" and type != "invalid" and type != "options" and type != "pauseMenu":
             self.protocol("WM_DELETE_WINDOW", root.close_confirm)
 
-
+        # Large and expandable else if tree determines what type of window is being built to format accordingly
         if type == "mainMenu": # UNFINISHED
             self.geometry("300x200")
             tk.Button(self,
@@ -179,64 +230,73 @@ class Window(tk.Toplevel):
             tk.OptionMenu(self,selectedGamemode,*GAMEMODES).pack(side=tk.TOP) # Create dropdown menu for gamemode
             tk.Button(self,
                     text="Continue",
-                    command=lambda: endSetup()).pack(side=tk.LEFT)
+                    command=lambda: end_setup()).pack(side=tk.LEFT)
             tk.Button(self,
                     text="Back",
-                    command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Unhide menu and destroy setup page
+                    command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.RIGHT) # Unhide main menu and destroy setup page
             
             # Signals setup is complete and generates board based on chosen settings
-            def endSetup():
+            def end_setup():
                 root.open_window("Board", "board")
-                createPlayerWindows()
-                self.destroy()
+                create_player_windows()
+                self.destroy() # Destroys the setup window
             
-            def createPlayerWindows(): # Creates the initial windows for players' personal sheets
-                global curPlayer
-                curPlayer = 1
+            def create_player_windows(): # Creates the initial windows for players' personal sheets
+                global activePlayer
                 root.open_window("Player 1", "playerSheet")
-                curPlayer = 2
+                activePlayer = 'B'
                 root.open_window("Player 2", "playerSheet")
+                activePlayer = 'R'
         
 
         elif type == "playerSheet": # Formats the players' personal sheets
-            self.geometry("200x750")
+            self.geometry("200x750") # Sets dimensions of window
             # Creates button array for units
             generate(12,1,"playerSheet")
-            # Formats player sheets based on indentity
-            if curPlayer == 1:
-                ttk.Label(self,text="Player Number 1").grid(row=0,column=1)
+            # Formats player sheets based on identity
+            sheetHeader = ttk.Label(self)
+            if activePlayer == 'R':
+                sheetHeader.configure(text="Player Number 1")
                 self.configure(background="red")
-                populateInitialArrayButtons('tileArrayP1', 'tileStateArrayP1',0,0)
-            elif curPlayer == 2:
-                ttk.Label(self,text='Player Number 2').grid(row=0,column=1)
+                populate_initial_array_buttons('tileArrayPR', 'tileStateArrayPR',0,0)
+            elif activePlayer == 'B':
+                sheetHeader.configure(text="Player Number 2")
                 self.configure(background="blue")
-                populateInitialArrayButtons('tileArrayP2', 'tileStateArrayP2',0,0)
+                populate_initial_array_buttons('tileArrayPB', 'tileStateArrayPB',0,0)
             # Creates an obvious error if player count is misinterpretted
             else:
-                ttk.Label(self,text="PLAYER SHEET ERROR").grid(row=0,column=0)
+                sheetHeader.configure(text="PLAYER SHEET ERROR")
                 self.configure(background="yellow")
+            sheetHeader.grid(row=0,column=2) # Positions header correctly in frame
             # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
             ttk.Button(self,
                        text="Close this window",
-                       command=self.destroy).grid(row=2,column=1)
+                       command=self.destroy).grid(row=2,column=2)
             
 
         elif type == "board": # Creates the main board window, where most of the interaction takes place
-            global arrayDict
+            global arrayDict, heldUnitTracker
 
+            # Generates correct board layout based on chosen gamemode
             if selectedGamemode.get() == "Classic":
                 generate(10,10,"board")
             elif selectedGamemode.get() == "Fantasy":
                 generate(8,10,"board")
-
-            pauseButton = tk.Button(self,text="Menu",command=lambda: [root.open_window("Pause Menu", "pauseMenu")])
-            pauseButton.grid(column=0,row=0,sticky=(tk.N,tk.W))
             
+            # Creates button to access the pause menu in the upper-lefthand corner of the main board
+            pauseButton = tk.Button(self,text="Menu",command=lambda: [root.open_window("Pause Menu", "pauseMenu")])
+            pauseButton.grid(column=0,row=0,sticky=(tk.N,tk.W)) # Positions button correctly in frame
+            
+            # Creates indicator that shows the current active player (ie the player whose turn it is)
             tk.Label(self,text="Active Player:").grid(column=0,row=1)
-            turnIndicator = tk.Label(self, bg=activePlayer)
-            turnIndicator.grid(column=0,row=2,sticky=(tk.E,tk.W), padx=5)
+            turnIndicator = tk.Label(self, bg="red") # Sets the initial value of the indicator to red (red is player 1)
+            turnIndicator.grid(column=0,row=2,sticky=(tk.E,tk.W), padx=5) # Positions indicator correctly in frame
 
-            populateInitialArrayButtons("tileArrayB","tileStateArrayB",1,150)
+            # Creates indicator that shows identity of the held unit, if any (ie the unit being moved by the active player)
+            heldUnitTracker = tk.Label(self,text=("Held Unit: "+tileContent))
+            heldUnitTracker.grid(column=0,row=3) # Positions indicator correctly in frame
+
+            populate_initial_array_buttons("tileArrayB","tileStateArrayB",1,150)
 
 
         elif type == "exit":
@@ -251,21 +311,22 @@ class Window(tk.Toplevel):
                        text="Back",
                        command=self.destroy).pack(side=tk.RIGHT)
 
-
+# Main foundational super-class from which all windows are created and initial system actions are taken on program start
 class Root(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.withdraw()
+        self.withdraw() # Hide this window on creation
 
     def close_all(self):  # Closes all windows, including hidden
         for child in self.winfo_children():
             child.destroy()
         self.destroy()
-
+    
+    # Opens window of the type specified by argument with entered title
     def open_window(self, title, type):
         window = Window(self, title, type)
-        window.resizable(False,False)
+        window.resizable(False,False) # Disables ability to resize windows to maintain cohesive appearance
         if type == "exit" or type == "options" or type == "pauseMenu":  # If exit confirmation window, forces user interaction
             window.grab_set()
 
@@ -274,10 +335,11 @@ class Root(tk.Tk):
     def close_confirm(self):  # Creates confirmation window
         self.open_window("Confirm exit?", "exit")
     
+    # If game in progress is continued, reads info from external txt file in which save game data is stored
     def load_save(saveName):
-        saveFile = open(saveName, "r")
+        saveFile = open(saveName, "r") # Opens appropriate save data txt file
         for line in saveFile:
-            if "playerCount" in line:
+            if "playerCount" in line: # Reads [example] from save data txt file and assigns to global variable
                 global playerCount
                 playerCount = line.strip("playerCount= ")
                 continue
