@@ -1,6 +1,6 @@
 # Import statements
 import tkinter as tk # Import tkinter modules to workspace
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 #import PIL
 #from PIL import ImageTk, Image
@@ -56,7 +56,7 @@ class Window(tk.Toplevel):
                 for y in range(len(arrayDict[tileArray])):
                     for x in range(len(arrayDict[tileArray][y])):
                         curTile = arrayDict[tileStateArray][y][x]
-                        if curTile[0] != activePlayer and curTile != "Empty" and curTile != "Impassible":
+                        if curTile[0] != activePlayer and curTile != "Empty" and curTile != "Impassible" and curTile[-1:] != "*":
                             arrayDict[tileArray][y][x].configure(text="?")
                         else:
                             arrayDict[tileArray][y][x].configure(text=curTile)
@@ -82,7 +82,11 @@ class Window(tk.Toplevel):
                                 else:
                                     arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
                             else:
-                                print("Not your turn")
+                                messagebox.showinfo(title="Invalid Selection",message="That is not a valid piece of the active player.")
+                        else:
+                            messagebox.showinfo(title="Invalid Selection",message="Please select a valid piece of the active player.")
+                else:
+                    messagebox.showinfo(title="Invalid Selection",message="That tile is impassible terrain.")
                 heldUnitTracker.configure(text=("Held Unit: "+tileContent)) # Updates value of unit tracker
 
             # Highlights selected cell in gold on click
@@ -94,7 +98,7 @@ class Window(tk.Toplevel):
                 lastBG = button.cget("bg")
                 selectedButton = button
                 BoardFunctionality.move_selection(tileStateArray,y,x) # Changes background data of clicked tile, dependent on factors as documented above
-                button.configure(bg="gold") # Updates value of button text to reflect background data
+                button.configure(bg="gold") # Updates background of tile to stay highlighted
 
         # ??MERGE GENERATE + POPULATE??
 
@@ -109,6 +113,9 @@ class Window(tk.Toplevel):
                 arrayDict['tileArrayM'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Stores data on cells in background
                 arrayDict['tileStateArrayM'] = [["Empty" for x in range(arrayWidth)] for y in range(arrayHeight)]
+
+                #TESTING VARS
+                arrayDict['tileStateArrayM'][0][0] = "R10*"
 
             elif useCase == "playerSheet":
                 # Creates clickable tiles for the user
@@ -140,14 +147,7 @@ class Window(tk.Toplevel):
                 for x in range(len(arrayDict[tileArray][y])):
                     self.columnconfigure(x+leftOffset, weight= 1, minsize=50)
 
-                    '''if tileStateArray == None:
-                        a# Positions quantity information correctly on playerSheets'''
-
                     # Call sub-dictionaries (children of arrayDict) of button variable names and configure appropriately, each initial assigned as str(y)+str(x)'[row-number][col-number]'
-                    '''arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
-                                                         command=lambda button=arrayDict[tileArray][y][x],
-                                                         tile=arrayDict[tileStateArray][y][x]: [BoardFunctionality.highlight_selection(button),
-                                                                                                BoardFunctionality.getTileState(tile)])'''
                     arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
                                         command=lambda tempTA=tileArray,
                                         tempTSA=tileStateArray,tempY=y,tempX=x: [BoardFunctionality.highlight_selection(tempTA,tempTSA,tempY,tempX)])
@@ -169,14 +169,6 @@ class Window(tk.Toplevel):
                             arrayDict[tileArray][y][x].configure(bg="#a7cffa") # Temporary indicator
                         elif y >= (len(arrayDict[tileArray])-i):
                             arrayDict[tileArray][y][x].configure(bg="#ea9f9f") # Temporary indicator
-                        '''for list in arrayDict[tileArray][:k][leftOffset:-1]:
-                            for tile in list:
-                                tile.configure(bg="#a7cffa") # Temporary indicator
-                        for list in arrayDict[tileArray][-k:][leftOffset:-1]:
-                            for tile in list:
-                                tile.configure(bg="#ea9f9f") # Temporary indicator'''
-                        #arrayDict[tileArray][:k][leftOffset:-1].configure(bg="#a7cffa") # Temporary indicator
-                        #arrayDict[tileArray][-k:][leftOffset:-1].configure(bg="#ea9f9f") # Temporary indicator
                         
                         # Section for right-side GUI widgets on main board
                         self.columnconfigure(leftOffset+len(arrayDict[tileArray][0]), weight= 2, minsize=offsetSize)
@@ -185,8 +177,15 @@ class Window(tk.Toplevel):
                         RIGHTELEMENT1.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=0,rowspan=1)
                         RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
 
-                        endTurnButton = tk.Button(self,text="End Turn",bg='yellow',command=lambda:[BoardFunctionality.end_turn(activePlayer)])
-                        endTurnButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-1,rowspan=1)
+                        rulesButton = tk.Button(self,text="Rules of Play",bg='green',command=lambda:[print("Rules")])
+                        rulesButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-3,rowspan=1)
+                        
+                        abilityButton = tk.Button(self,text="Unit Ability",bg='yellow',command=lambda:[print("Special Ability")])
+                        abilityButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-2,rowspan=1)
+
+                        # Button that 
+                        #startTurnButton = tk.Button(self,text="Start Turn",bg='green',command=lambda:[BoardFunctionality.end_turn(activePlayer)])
+                        #startTurnButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-1,rowspan=1)
                     
                     arrayDict[tileArray][y][x].grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W)) # Positions buttons within the window's grid
         
@@ -304,12 +303,12 @@ class Window(tk.Toplevel):
             sheetHeader.grid(row=0,column=2) # Positions header correctly in frame
             # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
             ttk.Button(self,
-                       text="Close this window",
-                       command=self.destroy).grid(row=2,column=2)
+                       text="Confirm Deployment",
+                       command=lambda:[]).grid(row=9999,column=2) # Confirms that the players units are deployed as they wish
             
 
         elif type == "board": # Creates the main board window, where most of the interaction takes place
-            global arrayDict, heldUnitTracker
+            global arrayDict, heldUnitTracker, turnIndicator
 
             # Generates correct board layout based on chosen gamemode
             if selectedGamemode.get() == "Classic":
