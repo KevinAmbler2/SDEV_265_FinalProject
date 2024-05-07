@@ -50,6 +50,16 @@ class Window(tk.Toplevel):
                 else:
                     activePlayer = 'R'
                     turnIndicator.configure(bg="red")
+                BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')
+            
+            def change_visability(tileArray,tileStateArray):
+                for y in range(len(arrayDict[tileArray])):
+                    for x in range(len(arrayDict[tileArray][y])):
+                        curTile = arrayDict[tileStateArray][y][x]
+                        if curTile[0] != activePlayer and curTile != "Empty" and curTile != "Impassible":
+                            arrayDict[tileArray][y][x].configure(text="?")
+                        else:
+                            arrayDict[tileArray][y][x].configure(text=curTile)
             
             # Reads the contents of the cell background data and moves pieces as allowed by valid moves, then updates the board buttons
             def move_selection(tileStateArray,y,x):
@@ -59,10 +69,20 @@ class Window(tk.Toplevel):
                     if tileContent != "": # Runs if selected tile is second tile clicked (ie, selected tile is the destination tile)
                         arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
                         tileContent = "" # Clears storage variable to allow new source tile
+                        BoardFunctionality.end_turn(activePlayer)
                     else: # Runs if selected tile is first tile clicked (ie, selected tile is the source tile)
                         if selectedTile != "Empty": # Won't allow an empty tile to be assigned as source tile
-                            tileContent = selectedTile # Set storage variable to source tile's value
-                            arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
+                            if selectedTile[0] == activePlayer:
+                                tileContent = selectedTile # Set storage variable to source tile's value
+                                if tileStateArray[-1:] != "M" and arrayDict['quantityStateArrayP%1c'%activePlayer][y] > 0:
+                                    arrayDict['quantityStateArrayP%1c'%activePlayer][y] -= 1
+                                    arrayDict['quantityArrayP%1c'%activePlayer][y].configure(text=str(arrayDict['quantityStateArrayP%1c'%activePlayer][y]))
+                                    if arrayDict['quantityStateArrayP%1c'%activePlayer][y] == 0:
+                                        arrayDict[tileStateArray][y][x] = "Impassible" # Set source tile value to impassible to show all pieces of that type are placed
+                                else:
+                                    arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
+                            else:
+                                print("Not your turn")
                 heldUnitTracker.configure(text=("Held Unit: "+tileContent)) # Updates value of unit tracker
 
             # Highlights selected cell in gold on click
@@ -74,42 +94,41 @@ class Window(tk.Toplevel):
                 lastBG = button.cget("bg")
                 selectedButton = button
                 BoardFunctionality.move_selection(tileStateArray,y,x) # Changes background data of clicked tile, dependent on factors as documented above
-                button.configure(bg="gold",text=arrayDict[tileStateArray][y][x]) # Updates value of button text to reflect background data
+                button.configure(bg="gold") # Updates value of button text to reflect background data
 
         # ??MERGE GENERATE + POPULATE??
 
         # Generates an empty board array based on the dimensions provided
-        # arrayDict['tileArrayB'][y][x] format -> stored as yx  -> increments across
-        def generate(arrayWidth, arrayHeight, useCase):
+        # arrayDict['tileArrayM'][y][x] format -> stored as yx  -> increments across
+        def generate(arrayHeight, arrayWidth, useCase):
             global arrayDict
 
             # Expandable else if tree that determines where arrays are being created
             if useCase == "board":
                 # Creates clickable tiles for the user
-                arrayDict['tileArrayB'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayHeight)] for y in range(arrayWidth)]
+                arrayDict['tileArrayM'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Stores data on cells in background
-                arrayDict['tileStateArrayB'] = [["Empty" for y in range(arrayHeight)] for x in range(arrayWidth)]
-
-                # TESTING VALUES
-                arrayDict['tileStateArrayB'][0][0] = "Unit1"
-                arrayDict['tileStateArrayB'][1][2] = "Unit2"
-                arrayDict['tileStateArrayB'][6][7] = "Unit3"
+                arrayDict['tileStateArrayM'] = [["Empty" for x in range(arrayWidth)] for y in range(arrayHeight)]
 
             elif useCase == "playerSheet":
                 # Creates clickable tiles for the user
-                arrayDict['tileArrayP%1c'%activePlayer] = [[tk.Button(self,relief="groove",activebackground="gold") for y in range(arrayHeight)] for x in range(arrayWidth)]
+                arrayDict['tileArrayP%1c'%activePlayer] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Stores data on cells in background
-                arrayDict['tileStateArrayP%1c'%activePlayer] = [["Empty" for y in range(arrayHeight)] for x in range(arrayWidth)]
+                arrayDict['tileStateArrayP%1c'%activePlayer] = [[(activePlayer+str(UNIT_STRENGTH[y])) for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Creates additional array to display unit quantity to players (unique to player sheets)
-                arrayDict['quantityArrayP%1c'%activePlayer] = [[tk.Label(self,text=UNIT_STRENGTH[y]) for y in range(arrayHeight)] for x in range(arrayWidth)]
-
-                # TESTING VALUES
-                arrayDict['tileStateArrayP%1c'%activePlayer][0][0] = "Unit1"
-                arrayDict['tileStateArrayP%1c'%activePlayer][1][0] = "Unit2"
-                arrayDict['tileStateArrayP%1c'%activePlayer][6][0] = "Unit3"
+                #arrayDict['quantityArrayP%1c'%activePlayer] = [tk.Label(self,text=UNIT_STRENGTH[y]).grid(row=y,column=1,sticky=(tk.N,tk.S,tk.E,tk.W)) for y in range(arrayHeight)]
+                #quantText = tk.StringVar() 
+                if selectedGamemode == "Classic":
+                    arrayDict['quantityStateArrayP%1c'%activePlayer] = [CLASSIC_ROSTER[UNIT_STRENGTH[y]][1] for y in range(arrayHeight)]
+                else:
+                    arrayDict['quantityStateArrayP%1c'%activePlayer] = [FANTASY_ROSTER[UNIT_STRENGTH[y]][1] for y in range(arrayHeight)]
+                arrayDict['quantityArrayP%1c'%activePlayer] = [tk.Label(self,text=arrayDict['quantityStateArrayP%1c'%activePlayer][y]) for y in range(arrayHeight)]
+                for y in range(arrayHeight):
+                    arrayDict['quantityArrayP%1c'%activePlayer][y].grid(row=y,column=1,sticky=(tk.N,tk.S,tk.E,tk.W))
+                #print(arrayDict['quantityArrayP%1c'%activePlayer])
         
         # Fills generated arrays with properly formatted buttons
-        def populate_initial_array_buttons(tileArray, tileStateArray, leftOffset, offsetSize): # leftOffset - Number of columns to offset for GUI on left of board grid
+        def format_initial_array(tileArray, tileStateArray, leftOffset=0, offsetSize=0): # leftOffset - Number of columns to offset for GUI on left of board grid
             # Section for left-side GUI widgets
             if leftOffset > 0:
                 for i in range(leftOffset):
@@ -121,6 +140,9 @@ class Window(tk.Toplevel):
                 for x in range(len(arrayDict[tileArray][y])):
                     self.columnconfigure(x+leftOffset, weight= 1, minsize=50)
 
+                    '''if tileStateArray == None:
+                        a# Positions quantity information correctly on playerSheets'''
+
                     # Call sub-dictionaries (children of arrayDict) of button variable names and configure appropriately, each initial assigned as str(y)+str(x)'[row-number][col-number]'
                     '''arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
                                                          command=lambda button=arrayDict[tileArray][y][x],
@@ -130,19 +152,31 @@ class Window(tk.Toplevel):
                                         command=lambda tempTA=tileArray,
                                         tempTSA=tileStateArray,tempY=y,tempX=x: [BoardFunctionality.highlight_selection(tempTA,tempTSA,tempY,tempX)])
 
-                    if tileArray.strip("tileArray") == "B": # Checks if main board is being generated
+                    if tileArray[-1:] == "M": # Checks if main board is being generated
                         self.rowconfigure(y, weight= 1, minsize=75)
                         self.columnconfigure(x+leftOffset, weight= 1, minsize=75)
-                        # Sets up impassible tiles in middle of board based on gamemode
+                        # Sets up impassible tiles in middle of board and player deployment zones based on gamemode
                         if selectedGamemode.get() == "Classic":
-                            j,k = 4,5
+                            i,j = 4,5
                             self.geometry(str(750+((leftOffset+1)*offsetSize))+"x750") # Sets size of board window based on gamemode
                         else:
-                            j,k = 3,4
+                            i,j = 3,4
                             self.geometry(str(750+((leftOffset+1)*offsetSize))+"x600") # Sets size of board window based on gamemode
-                        if (y==j or y==k) and (x==2 or x==3 or x==6 or x==7):
+                        if (y==i or y==j) and (x==2 or x==3 or x==6 or x==7):
                             arrayDict[tileStateArray][y][x] = "Impassible"
-                            arrayDict[tileArray][y][x].configure(text="X",bg="#13f3ee") # Temporary indicator
+                            arrayDict[tileArray][y][x].configure(text="Impassible",bg="#13f3ee") # Temporary indicator
+                        elif y < i:
+                            arrayDict[tileArray][y][x].configure(bg="#a7cffa") # Temporary indicator
+                        elif y >= (len(arrayDict[tileArray])-i):
+                            arrayDict[tileArray][y][x].configure(bg="#ea9f9f") # Temporary indicator
+                        '''for list in arrayDict[tileArray][:k][leftOffset:-1]:
+                            for tile in list:
+                                tile.configure(bg="#a7cffa") # Temporary indicator
+                        for list in arrayDict[tileArray][-k:][leftOffset:-1]:
+                            for tile in list:
+                                tile.configure(bg="#ea9f9f") # Temporary indicator'''
+                        #arrayDict[tileArray][:k][leftOffset:-1].configure(bg="#a7cffa") # Temporary indicator
+                        #arrayDict[tileArray][-k:][leftOffset:-1].configure(bg="#ea9f9f") # Temporary indicator
                         
                         # Section for right-side GUI widgets on main board
                         self.columnconfigure(leftOffset+len(arrayDict[tileArray][0]), weight= 2, minsize=offsetSize)
@@ -258,11 +292,11 @@ class Window(tk.Toplevel):
             if activePlayer == 'R':
                 sheetHeader.configure(text="Player Number 1")
                 self.configure(background="red")
-                populate_initial_array_buttons('tileArrayPR', 'tileStateArrayPR',0,0)
+                format_initial_array('tileArrayPR', 'tileStateArrayPR')
             elif activePlayer == 'B':
                 sheetHeader.configure(text="Player Number 2")
                 self.configure(background="blue")
-                populate_initial_array_buttons('tileArrayPB', 'tileStateArrayPB',0,0)
+                format_initial_array('tileArrayPB', 'tileStateArrayPB')
             # Creates an obvious error if player count is misinterpretted
             else:
                 sheetHeader.configure(text="PLAYER SHEET ERROR")
@@ -296,10 +330,10 @@ class Window(tk.Toplevel):
             heldUnitTracker = tk.Label(self,text=("Held Unit: "+tileContent))
             heldUnitTracker.grid(column=0,row=3) # Positions indicator correctly in frame
 
-            populate_initial_array_buttons("tileArrayB","tileStateArrayB",1,150)
+            format_initial_array("tileArrayM","tileStateArrayM",1,150)
 
 
-        elif type == "exit":
+        elif type == "exit": #CHANGE TO MESSAGEBOX
             # If close is confirmed, calls close_all function
             # Save functionality -> UNDER DEVELOPMENT
             tk.Label(self,text="Are you sure you want to close?").pack()
@@ -335,13 +369,20 @@ class Root(tk.Tk):
     def close_confirm(self):  # Creates confirmation window
         self.open_window("Confirm exit?", "exit")
     
+    '''def close_confirm(self):  # Creates confirmation window
+        #confirm = messagebox.askokcancel(title="Confirm exit?",message="Save and close all windows?")
+        if messagebox.askokcancel(title="Confirm exit?",message="Save and close all windows?"):
+            for child in root.winfo_children(): # Closes all windows, including hidden
+                child.destroy()
+            root.destroy()'''
+    
     # If game in progress is continued, reads info from external txt file in which save game data is stored
     def load_save(saveName):
         saveFile = open(saveName, "r") # Opens appropriate save data txt file
         for line in saveFile:
             if "playerCount" in line: # Reads [example] from save data txt file and assigns to global variable
                 global playerCount
-                playerCount = line.strip("playerCount= ")
+                playerCount = line[-1:]
                 continue
     
     # def hideNonActivePlayer(self, playerTurn):
