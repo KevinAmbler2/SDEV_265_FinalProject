@@ -78,7 +78,7 @@ class Window(tk.Toplevel):
                                     arrayDict['quantityStateArrayP%1c'%activePlayer][y] -= 1
                                     arrayDict['quantityArrayP%1c'%activePlayer][y].configure(text=str(arrayDict['quantityStateArrayP%1c'%activePlayer][y]))
                                     if arrayDict['quantityStateArrayP%1c'%activePlayer][y] == 0:
-                                        arrayDict[tileStateArray][y][x] = "Impassible" # Set source tile value to impassible to show all pieces of that type are placed
+                                        arrayDict[tileStateArray][y][x] = "Disabled" # Set source tile value to disabled to show all pieces of that type are placed
                                 else:
                                     arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
                             else:
@@ -99,6 +99,8 @@ class Window(tk.Toplevel):
                 selectedButton = button
                 BoardFunctionality.move_selection(tileStateArray,y,x) # Changes background data of clicked tile, dependent on factors as documented above
                 button.configure(bg="gold") # Updates background of tile to stay highlighted
+                if arrayDict[tileStateArray][y][x] == "Disabled":
+                    button.configure(state="disabled") # 
 
         # ??MERGE GENERATE + POPULATE??
 
@@ -304,7 +306,7 @@ class Window(tk.Toplevel):
             # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
             ttk.Button(self,
                        text="Confirm Deployment",
-                       command=lambda:[]).grid(row=9999,column=2) # Confirms that the players units are deployed as they wish
+                       command=lambda:[]).grid(row=11,column=2) # Confirms that the players units are deployed as they wish
             
 
         elif type == "board": # Creates the main board window, where most of the interaction takes place
