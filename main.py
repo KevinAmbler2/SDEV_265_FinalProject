@@ -237,7 +237,8 @@ class Window(tk.Toplevel):
                 if tileContent[-1:] != "*":
                     if selectedGamemode.get() == "Classic":
                         if tileContent[1] == '2':
-                            unitAbility = CLASSIC_ROSTER[tileContent[1]][0]
+                            #unitAbility = CLASSIC_ROSTER[tileContent[1]][0]
+                            unitAbility = "Scout"
                             tileContent += "*"
                         elif tileContent[1] == 'S' or tileContent[1] == '3' or tileContent[1] == 'T' or tileContent[1] == 'F':
                             messagebox.showinfo(title="Passive Abilty",message="The selected unit's special rules are always active.")
@@ -256,15 +257,31 @@ class Window(tk.Toplevel):
                 if unitAbility == "Scout":
                     if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
                         if abs(oldX-x) > 1:
-                            for tile in range(oldX,x):
-                                if arrayDict["tileStateArrayM"][y][tile] != "Empty":
-                                    return False
-                            return True
+                            if oldX-x > 0:
+                                for tile in range(x,oldX):
+                                    print("tile="+str(tile)+" oldX="+str(oldX)+" x="+str(x))
+                                    if arrayDict["tileStateArrayM"][y][tile] != "Empty":
+                                        return False
+                                return True
+                            else:
+                                for tile in range(oldX,x):
+                                    print("tile="+str(tile)+" oldX="+str(oldX)+" x="+str(x))
+                                    if arrayDict["tileStateArrayM"][y][tile] != "Empty":
+                                        return False
+                                return True
                         else:
-                            for tile in range(oldY,y):
-                                if arrayDict["tileStateArrayM"][tile][x] != "Empty":
-                                    return False
-                            return True
+                            if oldY-y > 0:
+                                for tile in range(y,oldY):
+                                    print("tile="+str(tile)+" oldY="+str(oldY)+" y="+str(y))
+                                    if arrayDict["tileStateArrayM"][tile][x] != "Empty":
+                                        return False
+                                return True
+                            else:
+                                for tile in range(oldY,y):
+                                    print("tile="+str(tile)+" oldY="+str(oldY)+" y="+str(y))
+                                    if arrayDict["tileStateArrayM"][tile][x] != "Empty":
+                                        return False
+                                return True
                 elif unitAbility == "Elf" or unitAbility == "Sorceress" or unitAbility == "Mage":
                     return not(abs(oldX-x)+abs(oldY-y) > 4)
                 elif unitAbility == "Knight" or unitAbility == "Beast Rider":
@@ -272,15 +289,27 @@ class Window(tk.Toplevel):
                 elif unitAbility == "Dragon":
                     if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
                         if abs(oldX-x) > 1:
-                            for tile in range(oldX,x):
-                                if arrayDict["tileStateArrayM"][y][tile] == "Empty":
-                                    return False
-                            return True
+                            if oldX-x > 0:
+                                for tile in range(x,oldX):
+                                    if arrayDict["tileStateArrayM"][y][tile] == "Empty":
+                                        return False
+                                return True
+                            else:
+                                for tile in range(oldX,x):
+                                    if arrayDict["tileStateArrayM"][y][tile] == "Empty":
+                                        return False
+                                return True
                         else:
-                            for tile in range(oldY,y):
-                                if arrayDict["tileStateArrayM"][tile][x] == "Empty":
-                                    return False
-                            return True
+                            if oldY-y:
+                                for tile in range(y,oldY):
+                                    if arrayDict["tileStateArrayM"][tile][x] == "Empty":
+                                        return False
+                                return True
+                            else:
+                                for tile in range(oldY,y):
+                                    if arrayDict["tileStateArrayM"][tile][x] == "Empty":
+                                        return False
+                                return True
                 else: # Default standard move/attack
                     return not(abs(oldX-x)+abs(oldY-y) > 1) and not(abs(oldX-x)+abs(oldY-y) == 0)
             
