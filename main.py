@@ -10,13 +10,13 @@ import random
 
 # UNIVERSAL CONSTANTS
 GAMEMODES = ["Classic","Fantasy"] # Available gamemode variations
-UNIT_STRENGTH = [10,9,8,7,6,5,4,3,2,'S','F','T'] # Array holding all unit strengths (used to create player sheet rosters)
+UNIT_STRENGTH = ['1','9','8','7','6','5','4','3','2','S','F','T'] # Array holding all unit strengths (used to create player sheet rosters)
 # Dictionary holding the names, strength, and quantity of units for the "Classic" gamemode variation in the format strength:[unitName,quantity]
-CLASSIC_ROSTER = {10:["Marshal",1],9:["General",1],8:["Colonel",2],7:["Major",3],6:["Captain",4],
-                  5:["Lieutenant",4],4:["Sergeant",4],3:["Miner",5],2:["Scout",8],'S':["Spy",1],'F':["Flag",1],'T':["Bomb",6]}
+CLASSIC_ROSTER = {'1':["Marshal",1],'9':["General",1],'8':["Colonel",2],'7':["Major",3],'6':["Captain",4],
+                  '5':["Lieutenant",4],'4':["Sergeant",4],'3':["Miner",5],'2':["Scout",8],'S':["Spy",1],'F':["Flag",1],'T':["Bomb",6]}
 # Dictionary holding the names, strength, and quantity of units for the "Classic" gamemode variation in the format strength:[unitName,quantity]
-FANTASY_ROSTER = {10:["Dragon",1],9:["Mage",1],8:["Knight",2],7:["Beast Rider",3],6:["Sorceress",2],
-                  5:["Elemental",2],4:["Elf",2],3:["Dwarf",5],2:["Scout",4],'S':["Spy",1],'F':["Flag",1],'T':["Trap",6]}
+FANTASY_ROSTER = {'1':["Dragon",1],'9':["Mage",1],'8':["Knight",2],'7':["Beast Rider",3],'6':["Sorceress",2],
+                  '5':["Elemental",2],'4':["Elf",2],'3':["Dwarf",5],'2':["Scout",4],'S':["Spy",1],'F':["Flag",1],'T':["Trap",6]}
 #print(CLASSIC_ROSTER)
 #print("\n\n\n")
 #print(FANTASY_ROSTER)
@@ -31,13 +31,15 @@ arrayDict = {} # Stores button and backend data sub-dictionaries for main board 
 selectedButton = None # Indicates which button the user has clicked on (excluding GUI/navigational buttons)
 lastBG = None # Stores the previous background color of the selected button
 tileContent = "" # Stores the backend data of what was positioned on the tile selected by the user
+deploymentComplete = [] # Stores the identity of players that have confirmed their deployment
+oldX, oldY = 0, 0
+unitAbility = "None"
 
 
 class Window(tk.Toplevel):
     def __init__(self, parent, title, type):
         super().__init__(parent)
 
-        self.geometry("300x100")
         self.title(title)
         
         class BoardFunctionality():
@@ -47,11 +49,151 @@ class Window(tk.Toplevel):
                 if player == 'R':
                     activePlayer = 'B'
                     turnIndicator.configure(bg="blue")
+                    if len(deploymentComplete) != 2:
+                        for child in root.winfo_children():
+                            if child.winfo_name() == "!window4":
+                                child.wm_attributes('-disabled',True)
+                                child.withdraw()
+                            elif child.winfo_name() != "!window":
+                                child.wm_attributes('-disabled',False)
+                                child.deiconify()
                 else:
                     activePlayer = 'R'
                     turnIndicator.configure(bg="red")
-                BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')
+                    if len(deploymentComplete) != 2:
+                        for child in root.winfo_children():
+                            if child.winfo_name() == "!window5":
+                                child.wm_attributes('-disabled',True)
+                                child.withdraw()
+                            elif child.winfo_name() != "!window":
+                                child.wm_attributes('-disabled',False)
+                                child.deiconify()
+                if (len(deploymentComplete) == 0 or len(deploymentComplete) == 2):
+                    Root.open_window(self,"Change Player", "blocker")
+                    BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')
+
+                if activePlayer in deploymentComplete and len(deploymentComplete) != 2: # If only one player has finished deployment, skip finished player's deployment step
+                    BoardFunctionality.end_turn(activePlayer)
+                
+                BoardFunctionality.update_deployment_restrictions('tileArrayM')
+
+                if len(deploymentComplete) == 2:
+                    for child in root.winfo_children():
+                        if child.winfo_name() == "!window4":
+                            child.destroy()
+                        elif child.winfo_name() == "!window5":
+                            child.destroy()
             
+            def resolve_combat(attacker,defender):
+                if selectedGamemode.get() == "Classic": # Checks gamemode for correct name list
+                    atkPiece = CLASSIC_ROSTER[attacker[1]][0] # Gets name of attacking piece
+                    defPiece = CLASSIC_ROSTER[defender[1]][0] # Gets name of defending piece
+                    # Checks if slayer/spy is attacking
+                    try:
+                        atkStrength = int(attacker[1])
+                    except: # Slayer/spy is attacking piece
+                        if defender[1] == '1': # If the defender is the dragon/marshal
+                            atkStrength = 11
+                            print("Marshal Assassinated")
+                        else: # All other defenders
+                            atkStrength = 0
+                    if atkStrength == 1: # Corrects dragon/marshal strength
+                        atkStrength = 10
+
+                    # Checks if slayer/spy, trap/bomb, or flag is defending
+                    try:
+                        defStrength = int(defender[1])
+                    except:
+                        if defender[1] == 'F': # Flag is defender
+                            defStrength = -1
+                            print("Flag Captured")
+                        elif defender[1] == 'T' and atkStrength == 3: # Trap/bomb is defender and attacker can difuse
+                            defStrength = 0
+                            print("Bomb Captured")
+                        elif defender[1] == 'T': # Trap/bomb is defender and attacker cannot difuse
+                            defStrength = 11
+                            print("Bomb Triggered")
+                        else: # Slayer/spy is defender
+                            defStrength = 0
+                    if defStrength == 1: # Corrects dragon/marshal strength
+                        defStrength = 10
+
+
+                    if activePlayer == 'R':
+                        if atkStrength > defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While attacking, Red's %s captured Blue's %s." % (atkPiece,defPiece))
+                            return attacker
+                        elif atkStrength < defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While defending, Blue's %s captured Red's %s." % (defPiece,atkPiece))
+                            return defender
+                        else:
+                            messagebox.showinfo(title="Attack Summary",message="In combat, both Red's %s and Blue's %s were captured." % (atkPiece,defPiece))
+                            return "Empty"
+                    else:
+                        if atkStrength > defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While attacking, Blue's %s captured Red's %s." % (atkPiece,defPiece))
+                            return attacker
+                        elif atkStrength < defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While defending, Red's %s captured Blue's %s." % (defPiece,atkPiece))
+                            return defender
+                        else:
+                            messagebox.showinfo(title="Attack Summary",message="In combat, both Blue's %s and Red's %s were captured." % (atkPiece,defPiece))
+                            return "Empty"
+                else:
+                    atkPiece = FANTASY_ROSTER[attacker[1]][0]
+                    defPiece = FANTASY_ROSTER[defender[1]][0]
+                    # Checks if slayer/spy is attacking
+                    try:
+                        atkStrength = int(attacker[1])
+                    except: # Slayer/spy is attacking piece
+                        if defender[1] == '1': # If the defender is the dragon/marshal
+                            atkStrength = 11
+                            print("Dragon Slayed")
+                        else: # All other defenders
+                            atkStrength = 0
+                    if atkStrength == 1: # Corrects dragon/marshal strength
+                        atkStrength = 10
+
+                    # Checks if slayer/spy, trap/bomb, or flag is defending
+                    try:
+                        defStrength = int(defender[1])
+                    except:
+                        if defender[1] == 'F': # Flag is defender
+                            defStrength = -1
+                            print("Flag Captured")
+                        elif defender[1] == 'T' and atkStrength == 3: # Trap/bomb is defender and attacker can difuse
+                            defStrength = 0
+                            print("Trap Captured")
+                        elif defender[1] == 'T': # Trap/bomb is defender and attacker cannot difuse
+                            defStrength = 11
+                            print("Trap Triggered")
+                        else: # Slayer/spy is defender
+                            defStrength = 0
+                    if defStrength == 1: # Corrects dragon/marshal strength
+                        defStrength = 10
+
+
+                    if activePlayer == 'R':
+                        if atkStrength > defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While attacking, Red's %s captured Blue's %s." % (atkPiece,defPiece))
+                            return attacker
+                        elif atkStrength < defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While defending, Blue's %s captured Red's %s." % (defPiece,atkPiece))
+                            return defender
+                        else:
+                            messagebox.showinfo(title="Attack Summary",message="In combat, both Red's %s and Blue's %s were captured." % (atkPiece,defPiece))
+                            return "Empty"
+                    else:
+                        if atkStrength > defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While attacking, Blue's %s captured Red's %s." % (atkPiece,defPiece))
+                            return attacker
+                        elif atkStrength < defStrength:
+                            messagebox.showinfo(title="Attack Summary",message="While defending, Red's %s captured Blue's %s." % (defPiece,atkPiece))
+                            return defender
+                        else:
+                            messagebox.showinfo(title="Attack Summary",message="In combat, both Blue's %s and Red's %s were captured." % (atkPiece,defPiece))
+                            return "Empty"
+
             def change_visability(tileArray,tileStateArray):
                 for y in range(len(arrayDict[tileArray])):
                     for x in range(len(arrayDict[tileArray][y])):
@@ -61,30 +203,137 @@ class Window(tk.Toplevel):
                         else:
                             arrayDict[tileArray][y][x].configure(text=curTile)
             
+            def update_deployment_restrictions(tileArray):
+                for y in range(len(arrayDict[tileArray])):
+                    for x in range(len(arrayDict[tileArray][y])):
+                        if selectedGamemode.get() == "Classic": i = 4
+                        else: i = 3
+
+                        if len(deploymentComplete) != 2:
+                            if activePlayer == "R": # Red player is deploying
+                                if y < i: # Blue deployment zone (Top 3-4 rows)
+                                    arrayDict[tileArray][y][x].configure(state="disabled")
+                                elif y >= (len(arrayDict[tileArray])-i): # Red deployment zone (Bottom 3-4 rows)
+                                    arrayDict[tileArray][y][x].configure(state="active")
+                            else: # Blue player is deploying
+                                if y < i: # Blue deployment zone (Top 3-4 rows)
+                                    arrayDict[tileArray][y][x].configure(state="active")
+                                elif y >= (len(arrayDict[tileArray])-i): # Red deployment zone (Bottom 3-4 rows)
+                                    arrayDict[tileArray][y][x].configure(state="disabled")
+                        else:
+                            arrayDict[tileArray][y][x].configure(state="active")
+
+            def activate_unit_ability():
+                global unitAbility, tileContent
+                abilityButton.configure(state="disabled")
+                if tileContent[-1:] != "*":
+                    if selectedGamemode == "Classic":
+                        if tileContent[1] == '2':
+                            unitAbility = CLASSIC_ROSTER[tileContent[1]][0]
+                            tileContent += "*"
+                        elif tileContent[1] == 'S' or tileContent[1] == '3' or tileContent[1] == 'T' or tileContent[1] == 'F':
+                            messagebox.showinfo(title="Passive Abilty",message="The selected unit's special rules are always active.")
+                        else:
+                            messagebox.showinfo(title="No Abilty",message="The selected unit has no active ability.")
+                    else:
+                        if tileContent[1] == 'S' or tileContent[1] == '3' or tileContent[1] == 'T' or tileContent[1] == 'F':
+                            messagebox.showinfo(title="Passive Abilty",message="The selected unit's special rules are always active.")
+                        else:
+                            unitAbility = FANTASY_ROSTER[tileContent[1]][0]
+                            tileContent += "*"
+                else:
+                    messagebox.showinfo(title="Abilty Depleted",message="The selected unit is revealed, and thus cannot use its ability.")
+
+            def position_check(x,y):
+                if unitAbility == "Scout":
+                    if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
+                        if abs(oldX-x) > 1:
+                            for tile in range(oldX,x):
+                                if arrayDict["tileStateArrayM"][y][tile] != "Empty":
+                                    return False
+                            return True
+                        else:
+                            for tile in range(oldY,y):
+                                if arrayDict["tileStateArrayM"][tile][x] != "Empty":
+                                    return False
+                            return True
+                elif unitAbility == "Elf" or unitAbility == "Sorceress" or unitAbility == "Mage":
+                    return not(abs(oldX-x)+abs(oldY-y) > 4)
+                elif unitAbility == "Knight" or unitAbility == "Beast Rider":
+                    return not(abs(oldX-x)+abs(oldY-y) > 2)
+                elif unitAbility == "Dragon":
+                    if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
+                        if abs(oldX-x) > 1:
+                            for tile in range(oldX,x):
+                                if arrayDict["tileStateArrayM"][y][tile] == "Empty":
+                                    return False
+                            return True
+                        else:
+                            for tile in range(oldY,y):
+                                if arrayDict["tileStateArrayM"][tile][x] == "Empty":
+                                    return False
+                            return True
+                else: # Default standard move/attack
+                    return not(abs(oldX-x)+abs(oldY-y) > 1) and not(abs(oldX-x)+abs(oldY-y) == 0)
+            
             # Reads the contents of the cell background data and moves pieces as allowed by valid moves, then updates the board buttons
-            def move_selection(tileStateArray,y,x):
-                global tileContent
+            def move_selection(tileArray,tileStateArray,y,x):
+                global tileContent, oldX, oldY, unitAbility
                 selectedTile = arrayDict[tileStateArray][y][x] # Indicates which tile is being accessed
                 if selectedTile != "Impassible": # Checks that both destination and source tiles aren't impassible
                     if tileContent != "": # Runs if selected tile is second tile clicked (ie, selected tile is the destination tile)
-                        arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
-                        tileContent = "" # Clears storage variable to allow new source tile
-                        BoardFunctionality.end_turn(activePlayer)
+                        if activePlayer in deploymentComplete: # If deployment is complete, follow normal movement rules and enable combat
+                            # ADD UNIT ABILITIES TO ELSE IF
+                            if BoardFunctionality.position_check(x,y): # Checks that piece is moving to orthagonal tile
+                                if selectedTile[0] == activePlayer: # Checks that destination tile does not contain friendly unit
+                                    messagebox.showinfo(title="Invalid Selection",message="You cannot end your movement on a tile containing a friendly unit.")
+                                elif selectedTile != "Empty": # Checks is destination tile contains enemy unit
+                                    BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
+                                    arrayDict[tileStateArray][y][x] = BoardFunctionality.resolve_combat(tileContent,selectedTile)
+                                    tileContent = "" # Clears storage variable to allow new source tile
+                                    unitAbility == ""
+                                    BoardFunctionality.end_turn(activePlayer)
+                                else: # If tile is empty
+                                    BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
+                                    arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
+                                    tileContent = "" # Clears storage variable to allow new source tile
+                                    unitAbility == ""
+                                    BoardFunctionality.end_turn(activePlayer)
+                            else:
+                                messagebox.showinfo(title="Invalid Selection",message="You must move to an adjecent orthagonal tile, or according to the selected unit's special ability.")
+                        else:
+                            if selectedTile[0] == activePlayer: # Checks that destination tile does not contain friendly unit
+                                messagebox.showinfo(title="Invalid Selection",message="You cannot end your movement on a tile containing a friendly unit.")
+                            else: # If tile is empty
+                                BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
+                                arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
+                                tileContent = "" # Clears storage variable to allow new source tile
+                                BoardFunctionality.end_turn(activePlayer)
                     else: # Runs if selected tile is first tile clicked (ie, selected tile is the source tile)
                         if selectedTile != "Empty": # Won't allow an empty tile to be assigned as source tile
-                            if selectedTile[0] == activePlayer:
-                                tileContent = selectedTile # Set storage variable to source tile's value
-                                if tileStateArray[-1:] != "M" and arrayDict['quantityStateArrayP%1c'%activePlayer][y] > 0:
-                                    arrayDict['quantityStateArrayP%1c'%activePlayer][y] -= 1
-                                    arrayDict['quantityArrayP%1c'%activePlayer][y].configure(text=str(arrayDict['quantityStateArrayP%1c'%activePlayer][y]))
-                                    if arrayDict['quantityStateArrayP%1c'%activePlayer][y] == 0:
-                                        arrayDict[tileStateArray][y][x] = "Disabled" # Set source tile value to disabled to show all pieces of that type are placed
-                                else:
+                            if selectedTile[0] == activePlayer: # Selected unit is controlled by active player
+                                if (activePlayer in deploymentComplete) and selectedTile[1] != 'T' and selectedTile[1] != 'F': # Checks if deployment is finished for active player and that piece is mobile
+                                    BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
+                                    tileContent = selectedTile # Set storage variable to source tile's value
+                                    oldX,oldY = x,y
                                     arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
+                                    abilityButton.configure(state="active",bg='yellow')
+                                elif (activePlayer not in deploymentComplete): # Checks that piece is mobile
+                                    BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
+                                    tileContent = selectedTile # Set storage variable to source tile's value
+                                    if tileStateArray[-1:] != "M": # Checks that player is placing new unit
+                                        arrayDict['quantityStateArrayP%1c'%activePlayer][y] -= 1 # Reduces the quantity of selected unit left to deploy
+                                        arrayDict['quantityArrayP%1c'%activePlayer][y].configure(text=str(arrayDict['quantityStateArrayP%1c'%activePlayer][y])) # Updates quantity counter
+                                        if arrayDict['quantityStateArrayP%1c'%activePlayer][y] == 0:
+                                            arrayDict[tileStateArray][y][x] = "Disabled" # Set source tile value to disabled to show all pieces of that type are placed
+                                    else:
+                                        arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
+                                else:
+                                    messagebox.showinfo(title="Invalid Selection",message="That is not a valid piece of the active player.")
                             else:
                                 messagebox.showinfo(title="Invalid Selection",message="That is not a valid piece of the active player.")
                         else:
-                            messagebox.showinfo(title="Invalid Selection",message="Please select a valid piece of the active player.")
+                            messagebox.showinfo(title="Invalid Selection",message="That is not a valid piece of the active player.")
                 else:
                     messagebox.showinfo(title="Invalid Selection",message="That tile is impassible terrain.")
                 heldUnitTracker.configure(text=("Held Unit: "+tileContent)) # Updates value of unit tracker
@@ -97,7 +346,6 @@ class Window(tk.Toplevel):
                     selectedButton.configure(bg=lastBG)
                 lastBG = button.cget("bg")
                 selectedButton = button
-                BoardFunctionality.move_selection(tileStateArray,y,x) # Changes background data of clicked tile, dependent on factors as documented above
                 button.configure(bg="gold") # Updates background of tile to stay highlighted
                 if arrayDict[tileStateArray][y][x] == "Disabled":
                     button.configure(state="disabled") # 
@@ -152,7 +400,8 @@ class Window(tk.Toplevel):
                     # Call sub-dictionaries (children of arrayDict) of button variable names and configure appropriately, each initial assigned as str(y)+str(x)'[row-number][col-number]'
                     arrayDict[tileArray][y][x].configure(text=arrayDict[tileStateArray][y][x],
                                         command=lambda tempTA=tileArray,
-                                        tempTSA=tileStateArray,tempY=y,tempX=x: [BoardFunctionality.highlight_selection(tempTA,tempTSA,tempY,tempX)])
+                                        tempTSA=tileStateArray,tempY=y,tempX=x: 
+                                        [BoardFunctionality.move_selection(tempTA,tempTSA,tempY,tempX)])
 
                     if tileArray[-1:] == "M": # Checks if main board is being generated
                         self.rowconfigure(y, weight= 1, minsize=75)
@@ -160,10 +409,12 @@ class Window(tk.Toplevel):
                         # Sets up impassible tiles in middle of board and player deployment zones based on gamemode
                         if selectedGamemode.get() == "Classic":
                             i,j = 4,5
-                            self.geometry(str(750+((leftOffset+1)*offsetSize))+"x750") # Sets size of board window based on gamemode
+                            #self.geometry(str(750+((leftOffset+1)*offsetSize))+"x750") # Sets size of board window based on gamemode
+                            Root.set_geometry(self,750+((leftOffset+1)*offsetSize),750) # Sets size of board window based on gamemode
                         else:
                             i,j = 3,4
-                            self.geometry(str(750+((leftOffset+1)*offsetSize))+"x600") # Sets size of board window based on gamemode
+                            #self.geometry(str(750+((leftOffset+1)*offsetSize))+"x600") # Sets size of board window based on gamemode
+                            Root.set_geometry(self,750+((leftOffset+1)*offsetSize),600) # Sets size of board window based on gamemode
                         if (y==i or y==j) and (x==2 or x==3 or x==6 or x==7):
                             arrayDict[tileStateArray][y][x] = "Impassible"
                             arrayDict[tileArray][y][x].configure(text="Impassible",bg="#13f3ee") # Temporary indicator
@@ -171,8 +422,12 @@ class Window(tk.Toplevel):
                             arrayDict[tileArray][y][x].configure(bg="#a7cffa") # Temporary indicator
                         elif y >= (len(arrayDict[tileArray])-i):
                             arrayDict[tileArray][y][x].configure(bg="#ea9f9f") # Temporary indicator
+
+                        arrayDict[tileArray][y][x].configure(state="disabled")
                         
                         # Section for right-side GUI widgets on main board
+                        global rulesButton, abilityButton
+
                         self.columnconfigure(leftOffset+len(arrayDict[tileArray][0]), weight= 2, minsize=offsetSize)
                         RIGHTELEMENT1 = tk.Text(self,wrap='word')
                         RIGHTELEMENT1.insert(1.0,"Here's where a GUI element will go.")
@@ -182,7 +437,7 @@ class Window(tk.Toplevel):
                         rulesButton = tk.Button(self,text="Rules of Play",bg='green',command=lambda:[print("Rules")])
                         rulesButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-3,rowspan=1)
                         
-                        abilityButton = tk.Button(self,text="Unit Ability",bg='yellow',command=lambda:[print("Special Ability")])
+                        abilityButton = tk.Button(self,text="Unit Ability",bg='yellow',state="disabled",command=lambda:[BoardFunctionality.activate_unit_ability()])
                         abilityButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-2,rowspan=1)
 
                         # Button that 
@@ -197,7 +452,7 @@ class Window(tk.Toplevel):
 
         # Large and expandable else if tree determines what type of window is being built to format accordingly
         if type == "mainMenu": # UNFINISHED
-            self.geometry("300x200")
+            Root.set_geometry(self,300,200)
             tk.Button(self,
                        text="Play Game",
                        command=lambda: [root.open_window("Game Setup", "setup"), self.withdraw()]).pack(side=tk.TOP, pady=5)
@@ -217,6 +472,7 @@ class Window(tk.Toplevel):
 
 
         elif type == "options":  # UNFINISHED
+            Root.set_geometry(self,200,300)
             tk.Button(self,
                        text="Save options",
                        command=lambda: [mainMenu.deiconify(), self.destroy()]).pack(side=tk.LEFT)  # UNFINISHED
@@ -226,7 +482,7 @@ class Window(tk.Toplevel):
         
 
         elif type == "pauseMenu": #UNFINISHED
-            self.geometry("200x300")
+            Root.set_geometry(self,200,300)
             tk.Button(self,
                        text="Return",
                        command=lambda: [self.destroy()]).pack(side=tk.TOP, pady=5)
@@ -245,6 +501,7 @@ class Window(tk.Toplevel):
 
 
         elif type == "setup": # UNFINISHED
+            Root.set_geometry(self,250,100)
             # This is kinda a stupid way to do things lol, but it works in theory
             # Save data needs to be saved in a way that allows program to differeniate sections of info
             '''if continuationCheck == True:
@@ -274,6 +531,7 @@ class Window(tk.Toplevel):
             def end_setup():
                 root.open_window("Board", "board")
                 create_player_windows()
+                BoardFunctionality.update_deployment_restrictions("tileArrayM")
                 self.destroy() # Destroys the setup window
             
             def create_player_windows(): # Creates the initial windows for players' personal sheets
@@ -285,18 +543,20 @@ class Window(tk.Toplevel):
         
 
         elif type == "playerSheet": # Formats the players' personal sheets
-            self.geometry("200x750") # Sets dimensions of window
             # Creates button array for units
             generate(12,1,"playerSheet")
             # Formats player sheets based on identity
             sheetHeader = ttk.Label(self)
+            #self.configure(name="playerSheetP%c"%activePlayer)
             if activePlayer == 'R':
                 sheetHeader.configure(text="Player Number 1")
                 self.configure(background="red")
+                Root.set_geometry(self,200,750,30) # Sets dimensions of window
                 format_initial_array('tileArrayPR', 'tileStateArrayPR')
             elif activePlayer == 'B':
                 sheetHeader.configure(text="Player Number 2")
                 self.configure(background="blue")
+                Root.set_geometry(self,200,750,1306) # Sets dimensions of window
                 format_initial_array('tileArrayPB', 'tileStateArrayPB')
             # Creates an obvious error if player count is misinterpretted
             else:
@@ -304,10 +564,12 @@ class Window(tk.Toplevel):
                 self.configure(background="yellow")
             sheetHeader.grid(row=0,column=2) # Positions header correctly in frame
             # HIDES ALL OTHER PLAYERS + BOARD IF NO OTHER ACTION TAKEN FIRST -> Locks up if no other windows available/open
-            ttk.Button(self,
+            tk.Button(self,
                        text="Confirm Deployment",
-                       command=lambda:[]).grid(row=11,column=2) # Confirms that the players units are deployed as they wish
-            
+                       command=lambda:[deploymentComplete.append(activePlayer),
+                                       BoardFunctionality.end_turn(activePlayer),
+                                       Root.open_window(root,"Change Player", "blocker"),
+                                       BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')]).grid(row=11,column=2) # Confirms that the players units are deployed as they wish            
 
         elif type == "board": # Creates the main board window, where most of the interaction takes place
             global arrayDict, heldUnitTracker, turnIndicator
@@ -332,9 +594,18 @@ class Window(tk.Toplevel):
             heldUnitTracker.grid(column=0,row=3) # Positions indicator correctly in frame
 
             format_initial_array("tileArrayM","tileStateArrayM",1,150)
+        
+
+        elif type == "blocker":
+            self.attributes('-fullscreen',True)
+            tk.Label(self,text="Pass control to other player.").pack()
+            tk.Button(self,
+                    text="Start Turn",
+                    command=self.destroy).pack()
 
 
-        elif type == "exit": #CHANGE TO MESSAGEBOX
+        elif type == "exit":
+            Root.set_geometry(self,300,100)
             # If close is confirmed, calls close_all function
             # Save functionality -> UNDER DEVELOPMENT
             tk.Label(self,text="Are you sure you want to close?").pack()
@@ -362,13 +633,27 @@ class Root(tk.Tk):
     def open_window(self, title, type):
         window = Window(self, title, type)
         window.resizable(False,False) # Disables ability to resize windows to maintain cohesive appearance
-        if type == "exit" or type == "options" or type == "pauseMenu":  # If exit confirmation window, forces user interaction
+        if type == "exit" or type == "options" or type == "pauseMenu" or type == "blocker":  # If critical window, forces user interaction
             window.grab_set()
 
         return window
 
     def close_confirm(self):  # Creates confirmation window
         self.open_window("Confirm exit?", "exit")
+    
+    def set_geometry(self,width,height,x=-1,y=-1): # Set position and dimensions of window
+        w = width # Window width in pixels
+        h = height # Window height in pixels
+        # Get screen width and height
+        ws = root.winfo_screenwidth() # width of the screen
+        hs = root.winfo_screenheight() # height of the screen
+        # Calculate x and y coordinates for window
+        if x == -1: # If no specific location given, center to screen horizontally
+            x = (ws/2) - (w/2)
+        if y == -1: # If no specific location given, center to screen vertically
+            y = (hs/2) - (h/2) - 50
+        # Set the dimensions and location of window
+        self.geometry('%dx%d+%d+%d' % (w, h, x, y))
     
     '''def close_confirm(self):  # Creates confirmation window
         #confirm = messagebox.askokcancel(title="Confirm exit?",message="Save and close all windows?")
