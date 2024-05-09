@@ -34,6 +34,7 @@ tileContent = "" # Stores the backend data of what was positioned on the tile se
 deploymentComplete = [] # Stores the identity of players that have confirmed their deployment
 oldX, oldY = 0, 0 # Tracks the coordinates of the "source" tile when determining movement
 unitAbility = "None" # Tracks which unit ability is in use to determine legal movement tiles
+winningPlayer = ""
 
 
 class Window(tk.Toplevel):
@@ -68,10 +69,12 @@ class Window(tk.Toplevel):
                             elif child.winfo_name() != "!window":
                                 child.wm_attributes('-disabled',False)
                                 child.deiconify()
-                if (len(deploymentComplete) == 0 or len(deploymentComplete) == 2):
+                if (len(deploymentComplete) == 0 or len(deploymentComplete) == 2) and winningPlayer == "":
                     Root.open_window(self,"Change Player", "blocker")
                     BoardFunctionality.change_visibility('tileArrayM','tileStateArrayM')
-
+                elif winningPlayer != "":
+                    Root.open_window(self,"Game Over","gameOver")
+                
                 if activePlayer in deploymentComplete and len(deploymentComplete) != 2: # If only one player has finished deployment, skip finished player's deployment step
                     BoardFunctionality.end_turn(activePlayer)
                 
@@ -85,6 +88,7 @@ class Window(tk.Toplevel):
                             child.destroy()
             
             def resolve_combat(attacker,defender):
+                global winningPlayer
                 if selectedGamemode.get() == "Classic": # Checks gamemode for correct name list
                     atkPiece = CLASSIC_ROSTER[attacker[1]][0] # Gets name of attacking piece
                     defPiece = CLASSIC_ROSTER[defender[1]][0] # Gets name of defending piece
@@ -106,6 +110,7 @@ class Window(tk.Toplevel):
                     except:
                         if defender[1] == 'F': # Flag is defender
                             defStrength = -1
+                            winningPlayer = activePlayer
                             print("Flag Captured")
                         elif defender[1] == 'T' and atkStrength == 3: # Trap/bomb is defender and attacker can difuse
                             defStrength = 0
@@ -164,6 +169,7 @@ class Window(tk.Toplevel):
                     except:
                         if defender[1] == 'F': # Flag is defender
                             defStrength = -1
+                            winningPlayer = activePlayer
                             print("Flag Captured")
                         elif defender[1] == 'T' and atkStrength == 3: # Trap/bomb is defender and attacker can difuse
                             defStrength = 0
@@ -258,26 +264,26 @@ class Window(tk.Toplevel):
                     if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
                         if abs(oldX-x) > 1:
                             if oldX-x > 0:
-                                for tile in range(x,oldX):
+                                for tile in range(x+1,oldX): # Moving left
                                     print("tile="+str(tile)+" oldX="+str(oldX)+" x="+str(x))
                                     if arrayDict["tileStateArrayM"][y][tile] != "Empty":
                                         return False
                                 return True
                             else:
-                                for tile in range(oldX,x):
+                                for tile in range(oldX,x-1): # Moving right
                                     print("tile="+str(tile)+" oldX="+str(oldX)+" x="+str(x))
                                     if arrayDict["tileStateArrayM"][y][tile] != "Empty":
                                         return False
                                 return True
                         else:
                             if oldY-y > 0:
-                                for tile in range(y,oldY):
+                                for tile in range(y+1,oldY): # Moving up
                                     print("tile="+str(tile)+" oldY="+str(oldY)+" y="+str(y))
                                     if arrayDict["tileStateArrayM"][tile][x] != "Empty":
                                         return False
                                 return True
                             else:
-                                for tile in range(oldY,y):
+                                for tile in range(oldY,y-1): # Moving down
                                     print("tile="+str(tile)+" oldY="+str(oldY)+" y="+str(y))
                                     if arrayDict["tileStateArrayM"][tile][x] != "Empty":
                                         return False
@@ -466,7 +472,7 @@ class Window(tk.Toplevel):
                         RIGHTELEMENT1.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=0,rowspan=1)
                         RIGHTELEMENT1.configure(bg=self.cget('bg'),relief='flat',state='disabled')
 
-                        rulesButton = tk.Button(self,text="Rules of Play",bg='green',command=lambda:[print("Rules")])
+                        rulesButton = tk.Button(self,text="Rules of Play",bg='green',command=lambda:[Root.open_window(self,"Rules of Play","ruleSheet")])
                         rulesButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-3,rowspan=1)
                         
                         abilityButton = tk.Button(self,text="Unit Ability",bg='yellow',state="disabled",command=lambda:[BoardFunctionality.activate_unit_ability()])
@@ -583,12 +589,12 @@ class Window(tk.Toplevel):
             if activePlayer == 'R':
                 sheetHeader.configure(text="Player Number 1")
                 self.configure(background="red")
-                Root.set_geometry(self,200,750,30) # Sets dimensions of window
+                Root.set_geometry(self,200,750,(root.winfo_screenwidth()/2)-(1050/2)-213) # Sets dimensions and position of window
                 format_initial_array('tileArrayPR', 'tileStateArrayPR')
             elif activePlayer == 'B':
                 sheetHeader.configure(text="Player Number 2")
                 self.configure(background="blue")
-                Root.set_geometry(self,200,750,1306) # Sets dimensions of window
+                Root.set_geometry(self,200,750,(root.winfo_screenwidth()/2)+(1050/2)+13) # Sets dimensions and position of window
                 format_initial_array('tileArrayPB', 'tileStateArrayPB')
             # Creates an obvious error if player count is misinterpretted
             else:
@@ -629,7 +635,35 @@ class Window(tk.Toplevel):
             format_initial_array("tileArrayM","tileStateArrayM",1,150)
         
 
-        elif type == "moveConfirm":
+        elif type == "ruleSheet":
+            Root.set_geometry(self,800,750)
+            tk.Label(self,text="PAGE UNDER CONSTRUCTION",wraplength=750).pack()
+            tk.Label(self,text="--GENERAL RULES--",wraplength=750).pack()
+            tk.Label(self,text="1. Capture your opponent's flag to win.",wraplength=750).pack()
+            tk.Label(self,text="--------------------------------------------------------------------------------------------------------------------------------",wraplength=750).pack()
+            tk.Label(self,text="--CLASSIC RULES--",wraplength=750).pack()
+            tk.Label(self,text="Flag - Immovable; capturing the opponent's Flag wins the game.",wraplength=750).pack()
+            tk.Label(self,text="Spy - Weakest piece, captured by any other attacking piece, but an attacking Spy can capture the Marshal.",wraplength=750).pack()
+            tk.Label(self,text="Bomb - Immovable; any piece attacking a Bomb is removed from the game, unless the attacking piece was a Miner.",wraplength=750).pack()
+            tk.Label(self,text="Scout - Can move any distance in a horizontal or vertical straight line without leaping over pieces or lakes; allows movement and attack in same turn.",wraplength=750).pack()
+            tk.Label(self,text="Miner - Can defuse (i.e. capture) Bombs",wraplength=750).pack()
+            tk.Label(self,text="Marshal - Most powerful piece, but vulnerable to capture by an attacking Spy",wraplength=750).pack()
+            tk.Label(self,text="--------------------------------------------------------------------------------------------------------------------------------",wraplength=750).pack()
+            tk.Label(self,text="--FANTASY RULES--",wraplength=750).pack()
+            tk.Label(self,text="Flag - Immovable; capturing the opponent's Flag wins the game.",wraplength=750).pack()
+            tk.Label(self,text="Slayer - Weakest piece, captured by any other attacking piece, but an attacking Slayer can capture the Dragon.",wraplength=750).pack()
+            tk.Label(self,text="Trap - Immovable; any piece attacking a Trap is removed from the game, unless the attacking piece was a Dwarf.",wraplength=750).pack()
+            tk.Label(self,text="Scout - Can move any distance in a horizontal or vertical straight line without leaping over pieces or lakes; allows movement and attack in same turn.",wraplength=750).pack()
+            tk.Label(self,text="Dwarf - Can defuse (i.e. capture) Traps",wraplength=750).pack()
+            tk.Label(self,text="Elf - May reveal, then attack an enemy piece within 2 squares (squares can be counted in any direction, including diagonal, and can cross forbidden zones); any attacked piece of rank 3 or lower is captured (including flags), otherwise no effect",wraplength=750).pack()
+            tk.Label(self,text="Elemental - May reveal, then move to an adjecent square (not diagonal), then attack ALL adjecent pieces (including diagonal, and friendly pieces); any attacked pieces of rank 5 or lower are captured (including flags); if any attacked pieces are of rank 5 or higher (including traps) then the attacking piece is captured",wraplength=750).pack()
+            tk.Label(self,text="Sorceress - May reveal, then force an enemy piece within 2 squares to reveal (squares can be counted in any direction, including diagonal, and can cross forbidden zones); if the revealed enemy piece is rank 5 or lower, it comes under the sorceress' control (including slayers, but not traps/flags)",wraplength=750).pack()
+            tk.Label(self,text="Beast Rider- May reveal, then move 2 squares (squares can be counted in any direction except diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat",wraplength=750).pack()
+            tk.Label(self,text="Knight - May reveal, then move 2 squares (squares can be counted in any direction except diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat",wraplength=750).pack()
+            tk.Label(self,text="Mage - May reveal, then force an enemy piece within 2 squares to reveal (squares can be counted in any direction, including diagonal, and can cross forbidden zones)",wraplength=750).pack()
+            tk.Label(self,text="Dragon - Most powerful piece, but vulnerable to capture by an attacking Slayer",wraplength=750).pack()
+
+        elif type == "moveConfirm": # UNUSED CURENTLY
             Root.set_geometry(self,250,100)
             tk.Label(self,text="Confirm that this is your intended move?").pack(side=tk.TOP)
             tk.Button(self,
@@ -643,10 +677,28 @@ class Window(tk.Toplevel):
 
         elif type == "blocker":
             self.attributes('-fullscreen',True)
-            tk.Label(self,text="Pass control to other player.").pack()
+            tk.Label(self,text="Pass control to other player.",font=('Segoe UI',20)).pack()
             tk.Button(self,
-                    text="Start Turn",
+                    text="Start Turn",font=('Segoe UI',15),
                     command=self.destroy).pack()
+            
+        
+        elif type == "gameOver":
+            Root.set_geometry(self,300,100)
+            '''for child in root.winfo_children():
+                child.configure(state="disabled")
+            self.configure(state="normal")'''
+            if winningPlayer == 'R':
+                tk.Label(self,text="Red Player has won the game by capturing their opponent's flag. Congratulations!").pack(side=tk.TOP)
+            else:
+                tk.Label(self,text="Blue Player has won the game by capturing their opponent's flag. Congratulations!").pack(side=tk.TOP)
+            tk.Button(self,
+                       text="Exit application",
+                       command=root.close_all).pack(side=tk.LEFT)
+            # If close is not confirmed, closes confirmation window
+            tk.Button(self,
+                       text="Observe the board",
+                       command=self.destroy).pack(side=tk.RIGHT)
 
 
         elif type == "exit":
