@@ -16,7 +16,7 @@ CLASSIC_ROSTER = {'1':["Marshal",1],'9':["General",1],'8':["Colonel",2],'7':["Ma
                   '5':["Lieutenant",4],'4':["Sergeant",4],'3':["Miner",5],'2':["Scout",8],'S':["Spy",1],'F':["Flag",1],'T':["Bomb",6]}
 # Dictionary holding the names, strength, and quantity of units for the "Classic" gamemode variation in the format strength:[unitName,quantity]
 FANTASY_ROSTER = {'1':["Dragon",1],'9':["Mage",1],'8':["Knight",2],'7':["Beast Rider",3],'6':["Sorceress",2],
-                  '5':["Elemental",2],'4':["Elf",2],'3':["Dwarf",5],'2':["Scout",4],'S':["Spy",1],'F':["Flag",1],'T':["Trap",6]}
+                  '5':["Elemental",2],'4':["Elf",2],'3':["Dwarf",5],'2':["Scout",4],'S':["Slayer",1],'F':["Flag",1],'T':["Trap",6]}
 #print(CLASSIC_ROSTER)
 #print("\n\n\n")
 #print(FANTASY_ROSTER)
@@ -32,8 +32,8 @@ selectedButton = None # Indicates which button the user has clicked on (excludin
 lastBG = None # Stores the previous background color of the selected button
 tileContent = "" # Stores the backend data of what was positioned on the tile selected by the user
 deploymentComplete = [] # Stores the identity of players that have confirmed their deployment
-oldX, oldY = 0, 0
-unitAbility = "None"
+oldX, oldY = 0, 0 # Tracks the coordinates of the "source" tile when determining movement
+unitAbility = "None" # Tracks which unit ability is in use to determine legal movement tiles
 
 
 class Window(tk.Toplevel):
@@ -70,7 +70,7 @@ class Window(tk.Toplevel):
                                 child.deiconify()
                 if (len(deploymentComplete) == 0 or len(deploymentComplete) == 2):
                     Root.open_window(self,"Change Player", "blocker")
-                    BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')
+                    BoardFunctionality.change_visibility('tileArrayM','tileStateArrayM')
 
                 if activePlayer in deploymentComplete and len(deploymentComplete) != 2: # If only one player has finished deployment, skip finished player's deployment step
                     BoardFunctionality.end_turn(activePlayer)
@@ -122,20 +122,24 @@ class Window(tk.Toplevel):
                     if activePlayer == 'R':
                         if atkStrength > defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While attacking, Red's %s captured Blue's %s." % (atkPiece,defPiece))
-                            return attacker
+                            if attacker[-1:] == "*": return attacker
+                            else: return attacker+"*"
                         elif atkStrength < defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While defending, Blue's %s captured Red's %s." % (defPiece,atkPiece))
-                            return defender
+                            if defender[-1:] == "*": return defender
+                            else: return defender+"*"
                         else:
                             messagebox.showinfo(title="Attack Summary",message="In combat, both Red's %s and Blue's %s were captured." % (atkPiece,defPiece))
                             return "Empty"
                     else:
                         if atkStrength > defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While attacking, Blue's %s captured Red's %s." % (atkPiece,defPiece))
-                            return attacker
+                            if attacker[-1:] == "*": return attacker
+                            else: return attacker+"*"
                         elif atkStrength < defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While defending, Red's %s captured Blue's %s." % (defPiece,atkPiece))
-                            return defender
+                            if defender[-1:] == "*": return defender
+                            else: return defender+"*"
                         else:
                             messagebox.showinfo(title="Attack Summary",message="In combat, both Blue's %s and Red's %s were captured." % (atkPiece,defPiece))
                             return "Empty"
@@ -176,25 +180,29 @@ class Window(tk.Toplevel):
                     if activePlayer == 'R':
                         if atkStrength > defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While attacking, Red's %s captured Blue's %s." % (atkPiece,defPiece))
-                            return attacker
+                            if attacker[-1:] == "*": return attacker
+                            else: return attacker+"*"
                         elif atkStrength < defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While defending, Blue's %s captured Red's %s." % (defPiece,atkPiece))
-                            return defender
+                            if defender[-1:] == "*": return defender
+                            else: return defender+"*"
                         else:
                             messagebox.showinfo(title="Attack Summary",message="In combat, both Red's %s and Blue's %s were captured." % (atkPiece,defPiece))
                             return "Empty"
                     else:
                         if atkStrength > defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While attacking, Blue's %s captured Red's %s." % (atkPiece,defPiece))
-                            return attacker
+                            if attacker[-1:] == "*": return attacker
+                            else: return attacker+"*"
                         elif atkStrength < defStrength:
                             messagebox.showinfo(title="Attack Summary",message="While defending, Red's %s captured Blue's %s." % (defPiece,atkPiece))
-                            return defender
+                            if defender[-1:] == "*": return defender
+                            else: return defender+"*"
                         else:
                             messagebox.showinfo(title="Attack Summary",message="In combat, both Blue's %s and Red's %s were captured." % (atkPiece,defPiece))
                             return "Empty"
 
-            def change_visability(tileArray,tileStateArray):
+            def change_visibility(tileArray,tileStateArray):
                 for y in range(len(arrayDict[tileArray])):
                     for x in range(len(arrayDict[tileArray][y])):
                         curTile = arrayDict[tileStateArray][y][x]
@@ -210,24 +218,24 @@ class Window(tk.Toplevel):
                         else: i = 3
 
                         if len(deploymentComplete) != 2:
-                            if activePlayer == "R": # Red player is deploying
+                            if activePlayer == 'R': # Red player is deploying
                                 if y < i: # Blue deployment zone (Top 3-4 rows)
                                     arrayDict[tileArray][y][x].configure(state="disabled")
                                 elif y >= (len(arrayDict[tileArray])-i): # Red deployment zone (Bottom 3-4 rows)
-                                    arrayDict[tileArray][y][x].configure(state="active")
+                                    arrayDict[tileArray][y][x].configure(state="normal")
                             else: # Blue player is deploying
                                 if y < i: # Blue deployment zone (Top 3-4 rows)
-                                    arrayDict[tileArray][y][x].configure(state="active")
+                                    arrayDict[tileArray][y][x].configure(state="normal")
                                 elif y >= (len(arrayDict[tileArray])-i): # Red deployment zone (Bottom 3-4 rows)
                                     arrayDict[tileArray][y][x].configure(state="disabled")
                         else:
-                            arrayDict[tileArray][y][x].configure(state="active")
+                            arrayDict[tileArray][y][x].configure(state="normal")
 
             def activate_unit_ability():
                 global unitAbility, tileContent
                 abilityButton.configure(state="disabled")
                 if tileContent[-1:] != "*":
-                    if selectedGamemode == "Classic":
+                    if selectedGamemode.get() == "Classic":
                         if tileContent[1] == '2':
                             unitAbility = CLASSIC_ROSTER[tileContent[1]][0]
                             tileContent += "*"
@@ -283,21 +291,23 @@ class Window(tk.Toplevel):
                 if selectedTile != "Impassible": # Checks that both destination and source tiles aren't impassible
                     if tileContent != "": # Runs if selected tile is second tile clicked (ie, selected tile is the destination tile)
                         if activePlayer in deploymentComplete: # If deployment is complete, follow normal movement rules and enable combat
-                            # ADD UNIT ABILITIES TO ELSE IF
-                            if BoardFunctionality.position_check(x,y): # Checks that piece is moving to orthagonal tile
+                            if BoardFunctionality.position_check(x,y): # Checks that piece making a legal move
+                                # ADD UNIT ABILITIES TO ELSE IF HERE
                                 if selectedTile[0] == activePlayer: # Checks that destination tile does not contain friendly unit
                                     messagebox.showinfo(title="Invalid Selection",message="You cannot end your movement on a tile containing a friendly unit.")
                                 elif selectedTile != "Empty": # Checks is destination tile contains enemy unit
+                                    '''if confirmationPrompt:
+                                        Root.open_window(self,"Move Confirmation",type="moveConfirm")'''
                                     BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
                                     arrayDict[tileStateArray][y][x] = BoardFunctionality.resolve_combat(tileContent,selectedTile)
                                     tileContent = "" # Clears storage variable to allow new source tile
-                                    unitAbility == ""
+                                    unitAbility == "None"
                                     BoardFunctionality.end_turn(activePlayer)
                                 else: # If tile is empty
                                     BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
                                     arrayDict[tileStateArray][y][x] = tileContent # Assigns destination tile to original value of source tile
                                     tileContent = "" # Clears storage variable to allow new source tile
-                                    unitAbility == ""
+                                    unitAbility == "None"
                                     BoardFunctionality.end_turn(activePlayer)
                             else:
                                 messagebox.showinfo(title="Invalid Selection",message="You must move to an adjecent orthagonal tile, or according to the selected unit's special ability.")
@@ -317,8 +327,8 @@ class Window(tk.Toplevel):
                                     tileContent = selectedTile # Set storage variable to source tile's value
                                     oldX,oldY = x,y
                                     arrayDict[tileStateArray][y][x] = "Empty" # Set source tile value to empty to show piece has left tile
-                                    abilityButton.configure(state="active",bg='yellow')
-                                elif (activePlayer not in deploymentComplete): # Checks that piece is mobile
+                                    abilityButton.configure(state="normal",bg='yellow')
+                                elif (activePlayer not in deploymentComplete): # Checks that player is still deploying
                                     BoardFunctionality.highlight_selection(tileArray,tileStateArray,y,x)
                                     tileContent = selectedTile # Set storage variable to source tile's value
                                     if tileStateArray[-1:] != "M": # Checks that player is placing new unit
@@ -363,26 +373,19 @@ class Window(tk.Toplevel):
                 arrayDict['tileArrayM'] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Stores data on cells in background
                 arrayDict['tileStateArrayM'] = [["Empty" for x in range(arrayWidth)] for y in range(arrayHeight)]
-
-                #TESTING VARS
-                arrayDict['tileStateArrayM'][0][0] = "R10*"
-
             elif useCase == "playerSheet":
                 # Creates clickable tiles for the user
                 arrayDict['tileArrayP%1c'%activePlayer] = [[tk.Button(self,relief="groove",activebackground="gold") for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Stores data on cells in background
                 arrayDict['tileStateArrayP%1c'%activePlayer] = [[(activePlayer+str(UNIT_STRENGTH[y])) for x in range(arrayWidth)] for y in range(arrayHeight)]
                 # Creates additional array to display unit quantity to players (unique to player sheets)
-                #arrayDict['quantityArrayP%1c'%activePlayer] = [tk.Label(self,text=UNIT_STRENGTH[y]).grid(row=y,column=1,sticky=(tk.N,tk.S,tk.E,tk.W)) for y in range(arrayHeight)]
-                #quantText = tk.StringVar() 
-                if selectedGamemode == "Classic":
+                if selectedGamemode.get() == "Classic":
                     arrayDict['quantityStateArrayP%1c'%activePlayer] = [CLASSIC_ROSTER[UNIT_STRENGTH[y]][1] for y in range(arrayHeight)]
                 else:
                     arrayDict['quantityStateArrayP%1c'%activePlayer] = [FANTASY_ROSTER[UNIT_STRENGTH[y]][1] for y in range(arrayHeight)]
                 arrayDict['quantityArrayP%1c'%activePlayer] = [tk.Label(self,text=arrayDict['quantityStateArrayP%1c'%activePlayer][y]) for y in range(arrayHeight)]
                 for y in range(arrayHeight):
                     arrayDict['quantityArrayP%1c'%activePlayer][y].grid(row=y,column=1,sticky=(tk.N,tk.S,tk.E,tk.W))
-                #print(arrayDict['quantityArrayP%1c'%activePlayer])
         
         # Fills generated arrays with properly formatted buttons
         def format_initial_array(tileArray, tileStateArray, leftOffset=0, offsetSize=0): # leftOffset - Number of columns to offset for GUI on left of board grid
@@ -569,7 +572,8 @@ class Window(tk.Toplevel):
                        command=lambda:[deploymentComplete.append(activePlayer),
                                        BoardFunctionality.end_turn(activePlayer),
                                        Root.open_window(root,"Change Player", "blocker"),
-                                       BoardFunctionality.change_visability('tileArrayM','tileStateArrayM')]).grid(row=11,column=2) # Confirms that the players units are deployed as they wish            
+                                       BoardFunctionality.change_visibility('tileArrayM','tileStateArrayM')]).grid(row=11,column=2) # Confirms that the players units are deployed as they wish            
+
 
         elif type == "board": # Creates the main board window, where most of the interaction takes place
             global arrayDict, heldUnitTracker, turnIndicator
@@ -595,6 +599,18 @@ class Window(tk.Toplevel):
 
             format_initial_array("tileArrayM","tileStateArrayM",1,150)
         
+
+        elif type == "moveConfirm":
+            Root.set_geometry(self,250,100)
+            tk.Label(self,text="Confirm that this is your intended move?").pack(side=tk.TOP)
+            tk.Button(self,
+                    text="Confirm Move",
+                    command=lambda: end_setup()).pack(side=tk.LEFT)
+            tk.Button(self,
+                    text="Cancel Move",
+                    command=lambda: [self.destroy()]).pack(side=tk.RIGHT) # Unhide main menu and destroy setup page
+            tk.Label(self,text="This setting can be disabled from the pause menu.",font=('Segoe UI',5)).pack(side=tk.BOTTOM)
+
 
         elif type == "blocker":
             self.attributes('-fullscreen',True)
@@ -633,7 +649,7 @@ class Root(tk.Tk):
     def open_window(self, title, type):
         window = Window(self, title, type)
         window.resizable(False,False) # Disables ability to resize windows to maintain cohesive appearance
-        if type == "exit" or type == "options" or type == "pauseMenu" or type == "blocker":  # If critical window, forces user interaction
+        if type == "exit" or type == "options" or type == "pauseMenu" or type == "blocker" or type == "moveConfirm":  # If critical window, forces user interaction
             window.grab_set()
 
         return window
