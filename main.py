@@ -1,9 +1,7 @@
 # Import statements
 import tkinter as tk # Import tkinter modules to workspace
 from tkinter import ttk, messagebox
-
-#import PIL
-#from PIL import ImageTk, Image
+from PIL import ImageTk, Image
 
 
 
@@ -41,7 +39,27 @@ class Window(tk.Toplevel): # Base window class
 
         self.title(title) # Sets title of created window
         
-        class BoardFunctionality(): # Controls various functions related to 
+        '''def get_image(unit):
+            path = "images"
+            if selectedGamemode.get() == "Classic":
+                path += "\\classic"
+            else:
+                path += "\\fantasy"
+
+            if unit[-1:] == 'R':
+                path += "\\red"
+            else:
+                path += "\\blue"
+            path += ("\\"+unit[1]+".png")
+            return ImageTk.PhotoImage(Image.open(path))'''
+        
+        '''def get_images(tileArray,tileStateArray):
+                for y in range(len(arrayDict[tileArray])):
+                    for x in range(len(arrayDict[tileArray][y])):
+                        img=ImageTk.PhotoImage(Image.open("%s.png"%arrayDict[tileStateArray][y][x]))
+                        arrayDict[tileArray][y][x].configure(image=img)'''
+
+        class BoardFunctionality(): # Controls various functions related to board interactions
             # Changes ownership of active player status
             def end_turn(player):
                 global activePlayer
@@ -213,8 +231,17 @@ class Window(tk.Toplevel): # Base window class
                     for x in range(len(arrayDict[tileArray][y])):
                         curTile = arrayDict[tileStateArray][y][x] # Checks every piece on chosen board
                         if curTile[0] != activePlayer and curTile != "Empty" and curTile != "Impassible" and curTile[-1:] != "*": # Tile has an unrevealed, inactive unit
+                            '''if activePlayer == 'R':
+                                arrayDict[tileArray][y][x].configure(text="?",image=ImageTk.PhotoImage(Image.open("images\\blueHidden.png"))) # Hide tile identity
+                            else:
+                                arrayDict[tileArray][y][x].configure(text="?",image=ImageTk.PhotoImage(Image.open("images\\redHidden.png"))) # Hide tile identity'''
                             arrayDict[tileArray][y][x].configure(text="?") # Hide tile identity
+                            '''elif curTile == "Empty":
+                                #arrayDict[tileArray][y][x].configure(text=curTile,image=None) # Reveal tile identity
+                            elif curTile == "Impassible":
+                                #arrayDict[tileArray][y][x].configure(text=curTile,image=None) # Reveal tile identity'''
                         else: # All other tiles
+                            #arrayDict[tileArray][y][x].configure(text=curTile,image=ImageTk.PhotoImage(Image.open(get_image(curTile)))) # Reveal tile identity
                             arrayDict[tileArray][y][x].configure(text=curTile) # Reveal tile identity
             
             # Updates board to only allow players to deploy units in their own deployment zone
@@ -260,6 +287,7 @@ class Window(tk.Toplevel): # Base window class
                 else: # If unit is revealed
                     messagebox.showinfo(title="Abilty Depleted",message="The selected unit is revealed, and thus cannot use its ability.") # Unit revealed warning pop-up message
 
+            # Checks that moves are legal, including special movement abilities
             def position_check(x,y):
                 if unitAbility == "Scout":
                     if not(abs(oldX-x) > 1 and abs(oldY-y) > 1):
@@ -480,7 +508,6 @@ class Window(tk.Toplevel): # Base window class
                         # Activates unit special ability, if any
                         abilityButton = tk.Button(self,text="Unit Ability",bg='yellow',state="disabled",command=lambda:[BoardFunctionality.activate_unit_ability()])
                         abilityButton.grid(column=leftOffset+len(arrayDict[tileArray][0]),row=len(arrayDict[tileArray])-2,rowspan=1) # Positions ability button on board
-                    
                     arrayDict[tileArray][y][x].grid(column=x+leftOffset,row=y,sticky=(tk.N,tk.S,tk.E,tk.W)) # Positions buttons within the window's grid
         
         # Allows user to close listed windows manually, otherwise prevents deletion of critical windows/components
@@ -489,19 +516,21 @@ class Window(tk.Toplevel): # Base window class
 
         # Large and expandable else if tree determines what type of window is being built to format accordingly
         if type == "mainMenu": # UNFINISHED - Main menu and application splash screen for startup
-            Root.set_geometry(self,300,200) # Set window dimensions and screen position
+            #Root.set_geometry(self,300,200) # Set window dimensions and screen position
+            Root.set_geometry(self,300,500) # Set window dimensions and screen position
             tk.Button(self,
-                       text="Play Game",
+                       text="Play Game",image=ImageTk.PhotoImage(Image.open("B1.png")),
                        command=lambda: [root.open_window("Game Setup", "setup"), self.withdraw()]).pack(side=tk.TOP, pady=5) # Create new game and hide main menu
             tk.Button(self,
-                       text="Continue",
+                       text="Continue",image=ImageTk.PhotoImage(Image.open("B2.png")),
                        command=lambda: [changeContinueCheck(), root.open_window("Game Load", "setup"), self.withdraw()]).pack(pady=5) # Load saved game and hide main menu
             tk.Button(self,
-                       text="Options",
+                       text="Options",image=ImageTk.PhotoImage(Image.open("B3.png")),
                        command=lambda: [root.open_window("Options", "options"), self.withdraw()]).pack(pady=5) # Open options menu and hide main menu
             tk.Button(self,
-                       text="Exit",
+                       text="Exit",image=ImageTk.PhotoImage(Image.open("B4.png")),
                        command=root.close_confirm).pack(side=tk.BOTTOM, pady=5) # Close application
+            #tk.Label(self,image=ImageTk.PhotoImage(Image.open("B1.png"))).pack()
             
             def changeContinueCheck(): # If saving is being loaded
                 global continuationCheck
@@ -661,6 +690,7 @@ class Window(tk.Toplevel): # Base window class
             tk.Label(self,text="Knight - May reveal, then move 2 squares (squares can be counted in any direction except diagonal, and CANNOT cross forbidden zones); can move into a space containing an enemy piece, immediately ending its movement and resolving combat",wraplength=750).pack()
             tk.Label(self,text="Mage - May reveal, then force an enemy piece within 2 squares to reveal (squares can be counted in any direction, including diagonal, and can cross forbidden zones)",wraplength=750).pack()
             tk.Label(self,text="Dragon - Most powerful piece, but vulnerable to capture by an attacking Slayer",wraplength=750).pack()
+
 
         elif type == "moveConfirm": # UNUSED/UNFINISHED - 
             Root.set_geometry(self,250,100) # Set window dimensions and screen position
