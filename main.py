@@ -516,21 +516,21 @@ class Window(tk.Toplevel): # Base window class
 
         # Large and expandable else if tree determines what type of window is being built to format accordingly
         if type == "mainMenu": # UNFINISHED - Main menu and application splash screen for startup
-            #Root.set_geometry(self,300,200) # Set window dimensions and screen position
             Root.set_geometry(self,300,500) # Set window dimensions and screen position
             tk.Button(self,
-                       text="Play Game",image=ImageTk.PhotoImage(Image.open("B1.png")),
+                       text="Play Game",
                        command=lambda: [root.open_window("Game Setup", "setup"), self.withdraw()]).pack(side=tk.TOP, pady=5) # Create new game and hide main menu
             tk.Button(self,
-                       text="Continue",image=ImageTk.PhotoImage(Image.open("B2.png")),
+                       text="Continue",
                        command=lambda: [changeContinueCheck(), root.open_window("Game Load", "setup"), self.withdraw()]).pack(pady=5) # Load saved game and hide main menu
             tk.Button(self,
-                       text="Options",image=ImageTk.PhotoImage(Image.open("B3.png")),
+                       text="Options",
                        command=lambda: [root.open_window("Options", "options"), self.withdraw()]).pack(pady=5) # Open options menu and hide main menu
             tk.Button(self,
-                       text="Exit",image=ImageTk.PhotoImage(Image.open("B4.png")),
-                       command=root.close_confirm).pack(side=tk.BOTTOM, pady=5) # Close application
-            #tk.Label(self,image=ImageTk.PhotoImage(Image.open("B1.png"))).pack()
+                       text="Exit",
+                       command=root.close_confirm).pack(pady=5) # Close application
+            tk.Label(self,image=ImageTk.PhotoImage(Image.open("1.png"))).pack()
+            tk.Label(self,image=ImageTk.PhotoImage(Image.open("2.png"))).pack()
             
             def changeContinueCheck(): # If saving is being loaded
                 global continuationCheck
